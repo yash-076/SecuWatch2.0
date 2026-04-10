@@ -121,6 +121,25 @@ class AlertService:
         rows = self.db.execute(paged_query).mappings().all()
         return [dict(row) for row in rows], total
 
+    def get_alert_by_id_for_user(self, user: User, alert_id: int) -> dict | None:
+        row = (
+            self.db.execute(
+                select(
+                    Alert.id,
+                    Alert.device_id,
+                    Alert.type,
+                    Alert.severity,
+                    Alert.description,
+                    Alert.created_at,
+                )
+                .join(Device, Device.id == Alert.device_id)
+                .where(Alert.id == alert_id, Device.user_id == user.id)
+            )
+            .mappings()
+            .first()
+        )
+        return dict(row) if row else None
+
     @staticmethod
     def _validate_alert_data(alert_data: AlertData) -> None:
         """

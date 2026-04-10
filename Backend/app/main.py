@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from app.database import Base, engine, ensure_database_exists
 from app.models import Alert, Device, Log, RefreshToken, User
+from app.routes.ai import router as ai_router
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
 from app.routes.devices import router as devices_router
@@ -35,3 +36,4 @@ app.include_router(heartbeat_router)
 app.include_router(alerts_router)
 app.include_router(logs_router)
 app.include_router(websocket_router)
+app.include_router(ai_router)

@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     kafka_producer_retries: int = 3
     kafka_producer_request_timeout_ms: int = 5000
     kafka_consumer_group_prefix: str = "secuwatch"
+    gemini_api_key: str | None = None
+    llm_api_key: str | None = None
+    llm_api_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    llm_model: str = "gemini-2.0-flash"
+    llm_timeout_seconds: int = 30
+    ai_cache_ttl_seconds: int = 600
 
     model_config = SettingsConfigDict(
         env_file=".env",

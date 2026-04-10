@@ -8,6 +8,15 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.schemas.alert import AlertListResponse, AlertOut
+from app.schemas.ai import (
+    AlertAnalysisResult,
+    AlertForAI,
+    AlertPayload,
+    AnalyzeAlertRequest,
+    AnalyzeAlertResponse,
+    ChatRequest,
+    ChatResponse,
+)
 from app.schemas.device import DeviceCreateRequest, DeviceCreateResponse, DeviceOut
 from app.schemas.log import LogIngestRequest, LogIngestResponse
 
@@ -21,6 +30,13 @@ __all__ = [
     "UserOut",
     "AlertOut",
     "AlertListResponse",
+    "AlertPayload",
+    "AlertForAI",
+    "AnalyzeAlertRequest",
+    "AlertAnalysisResult",
+    "AnalyzeAlertResponse",
+    "ChatRequest",
+    "ChatResponse",
     "DeviceCreateRequest",
     "DeviceCreateResponse",
     "DeviceOut",

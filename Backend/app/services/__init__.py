@@ -1,4 +1,5 @@
 from app.services.alert_service import AlertService
+from app.services.ai_service import AIService
 from app.services.auth_service import AuthService
 from app.services.device_service import DeviceService
 from app.services.event_dispatcher import EventDispatcher
@@ -9,5 +10,6 @@ __all__ = [
     "DeviceService",
     "LogService",
     "AlertService",
+    "AIService",
     "EventDispatcher",
 ]

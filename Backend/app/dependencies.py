@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services.auth_service import AuthService
+from app.services.ai_service import AIService
 from app.services.alert_service import AlertService
 from app.services.device_service import DeviceService
 from app.services.event_dispatcher import EventDispatcher
@@ -40,6 +41,10 @@ def get_event_dispatcher(db: Session = Depends(get_db)) -> EventDispatcher:
 
 def get_alert_service(db: Session = Depends(get_db)) -> AlertService:
     return AlertService(db=db)
+
+
+def get_ai_service(redis_client: Redis = Depends(get_redis)) -> AIService:
+    return AIService(redis_client=redis_client)
 
 
 def get_current_user(
