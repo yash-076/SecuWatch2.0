@@ -1,0 +1,17 @@
+{
+  "folders": [
+    {
+      "name": "Backend",
+      "path": "Backend"
+    },
+    {
+      "name": "agent",
+      "path": "agent"
+    },
+    {
+      "name": "Frontend",
+      "path": "Frontend"
+    }
+  ],
+  "settings": {}
+}

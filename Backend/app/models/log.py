@@ -13,8 +13,8 @@ class Log(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), index=True)
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"))
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     device = relationship("Device", back_populates="logs")
