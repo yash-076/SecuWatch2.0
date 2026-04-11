@@ -38,11 +38,29 @@ class DeviceService:
         self.db = db
         self.redis_client = redis_client
 
-    def create_device(self, user: User, device_name: str) -> tuple[Device, str]:
+    def create_device(self, user: User, device_name: str, device_type: str) -> tuple[Device, str]:
+        normalized_device_name = device_name.strip()
+        normalized_device_type = device_type.strip().lower()
+        if not normalized_device_name:
+            raise ValueError("Device name is required")
+
+        if normalized_device_type not in {"linux", "windows", "web", "application"}:
+            raise ValueError("Device type must be linux, windows, web, or application")
+
+        existing_device = self.db.scalar(
+            select(Device).where(
+                Device.user_id == user.id,
+                func.lower(func.trim(Device.device_name)) == normalized_device_name.lower(),
+            )
+        )
+        if existing_device:
+            raise ValueError("Device name already exists for this user")
+
         raw_api_key = generate_api_key()
         device = Device(
             user_id=user.id,
-            device_name=device_name,
+            device_name=normalized_device_name,
+            device_type=normalized_device_type,
             api_key_hash=hash_api_key(raw_api_key),
         )
         self.db.add(device)
@@ -145,7 +163,7 @@ class DeviceService:
         self.db.refresh(device)
         return device
 
-    def delete_device(self, user: User, device_id: int) -> None:
+    def delete_device(self, user: User, device_id: int) -> Device:
         device = self.db.scalar(select(Device).where(Device.id == device_id, Device.user_id == user.id))
         if not device:
             raise ValueError("Device not found")
@@ -153,6 +171,7 @@ class DeviceService:
         self.db.delete(device)
         self.db.commit()
         self.invalidate_device_cache(device_id)
+        return device
 
     def invalidate_device_cache(self, device_id: int) -> None:
         self.redis_client.delete(self._cache_key(device_id))

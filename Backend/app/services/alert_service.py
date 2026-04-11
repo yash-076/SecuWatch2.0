@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import asc, desc, func, select
@@ -7,6 +8,8 @@ from app.models.alert import Alert, AlertSeverity
 from app.models.device import Device
 from app.models.user import User
 from app.services.alert_engine.base import AlertData
+
+logger = logging.getLogger(__name__)
 
 
 class AlertService:
@@ -42,6 +45,14 @@ class AlertService:
         self.db.add(alert)
         self.db.commit()
         self.db.refresh(alert)
+
+        logger.info(
+            "Alert persisted: alert_id=%s, device_id=%s, type=%s, severity=%s",
+            alert.id,
+            alert.device_id,
+            alert.type,
+            alert.severity,
+        )
 
         return alert
 

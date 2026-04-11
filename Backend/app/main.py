@@ -2,7 +2,9 @@ import asyncio
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 from app.database import Base, engine, ensure_database_exists
 from app.models import Alert, Device, Log, RefreshToken, User
 from app.routes.ai import router as ai_router
@@ -19,8 +21,29 @@ app = FastAPI(title="SecuWatch 2.0 API")
 logger = logging.getLogger(__name__)
 
 
+def _configure_logging() -> None:
+    log_level = getattr(logging, settings.app_log_level.upper(), logging.DEBUG)
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        force=True,
+    )
+
+# Test frontend runs on a separate local origin, so enable broad CORS for dev/testing.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.on_event("startup")
 async def on_startup() -> None:
+    _configure_logging()
+    logger.info("Application logging configured at level=%s", settings.app_log_level.upper())
+
     ensure_database_exists()
     Base.metadata.create_all(bind=engine)
     ws_manager.set_event_loop(asyncio.get_running_loop())

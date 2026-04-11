@@ -79,7 +79,7 @@ def _process_log_message(payload: dict[str, Any]) -> None:
 
         alert_service = AlertService(db)
         alert = alert_service.create_alert(log.device, alert_data)
-        produce_alert_event(
+        published = produce_alert_event(
             {
                 "id": alert.id,
                 "device_id": alert.device_id,
@@ -89,6 +89,16 @@ def _process_log_message(payload: dict[str, Any]) -> None:
                 "created_at": alert.created_at.isoformat(),
             }
         )
+        logger.info(
+            "Consumer created alert: alert_id=%s, log_id=%s, device_id=%s, type=%s, severity=%s",
+            alert.id,
+            log.id,
+            log.device_id,
+            alert.type,
+            alert.severity,
+        )
+        if not published:
+            logger.warning("Kafka alert event publish failed for alert_id=%s", alert.id)
 
 
 def run() -> None:

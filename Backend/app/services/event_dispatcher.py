@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from sqlalchemy.orm import Session
@@ -6,6 +7,8 @@ from app.models.log import Log
 from app.services.alert_engine import AlertData, get_alert_engine
 from app.services.alert_service import AlertService
 from app.services.websocket_manager import ws_manager
+
+logger = logging.getLogger(__name__)
 
 
 class EventDispatcher:
@@ -48,6 +51,7 @@ class EventDispatcher:
         except Exception as e:
             # Log detection failure but don't block other handlers
             event_context["alert_error"] = str(e)
+            logger.exception("Alert detection failed for log_id=%s: %s", log.id, e)
 
         return event_context
 
@@ -74,6 +78,14 @@ class EventDispatcher:
                         "type": alert.type,
                         "severity": alert.severity,
                     }
+                )
+                logger.info(
+                    "Alert created from dispatcher: alert_id=%s, log_id=%s, device_id=%s, type=%s, severity=%s",
+                    alert.id,
+                    log.id,
+                    log.device_id,
+                    alert.type,
+                    alert.severity,
                 )
                 # Broadcast the new alert to all connected WebSocket clients
                 self._broadcast_alert(alert)

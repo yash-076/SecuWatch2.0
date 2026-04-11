@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-2.0-flash"
     llm_timeout_seconds: int = 30
     ai_cache_ttl_seconds: int = 600
+    app_log_level: str = "DEBUG"
 
     model_config = SettingsConfigDict(
         env_file=".env",

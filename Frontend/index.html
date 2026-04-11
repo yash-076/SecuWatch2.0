@@ -3,401 +3,513 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecuWatch 2.0 - Real-Time Alerts</title>
+    <title>SecuWatch Test Console</title>
     <style>
+        :root {
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --text: #1e2a3a;
+            --muted: #61738a;
+            --line: #d8e2ef;
+            --primary: #0f6fff;
+            --primary-hover: #0b58cb;
+            --danger: #d93838;
+            --success: #198754;
+            --warn: #d97706;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f5f7fa;
-            padding: 20px;
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            color: var(--text);
+            background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 55%);
+            min-height: 100vh;
+            padding: 16px;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 980px;
             margin: 0 auto;
         }
 
-        .header {
-            background: white;
-            padding: 20px;
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 16px rgba(27, 60, 102, 0.06);
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+        }
+
+        h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+
+        p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
             border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            background: #f0f0f0;
-            border-radius: 4px;
             font-size: 14px;
-            color: #666;
         }
 
-        .status.connected {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .status.disconnected {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .status.connected .status-dot {
-            background: #4caf50;
-        }
-
-        .status.disconnected .status-dot {
-            background: #f44336;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
         }
 
         button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            background: #2196f3;
-            color: white;
-            cursor: pointer;
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
             font-size: 14px;
-            transition: background 0.2s;
+            cursor: pointer;
+            background: var(--primary);
+            color: #fff;
         }
 
         button:hover {
-            background: #1976d2;
-        }
-
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
+            background: var(--primary-hover);
         }
 
         button.danger {
-            background: #f44336;
+            background: var(--danger);
         }
 
-        button.danger:hover {
-            background: #d32f2f;
+        button.ghost {
+            background: #ecf2fb;
+            color: #2f4f79;
         }
 
-        .alerts-section {
-            background: white;
-            padding: 20px;
+        .status {
+            padding: 8px 10px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .alerts-section h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-
-        #alerts-container {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        #alerts-container:empty::before {
-            content: "No alerts yet. Waiting for incoming alerts...";
-            display: block;
-            padding: 40px 20px;
-            text-align: center;
-            color: #999;
-        }
-
-        /* Alert styles */
-        .alert {
-            padding: 16px;
-            margin: 8px 0;
-            border-radius: 4px;
-            background: #f5f5f5;
-            border-left: 4px solid #999;
-            border-right: 1px solid #ddd;
-            opacity: 0;
-            transition: all 0.3s ease-in-out;
-            position: relative;
-        }
-
-        .alert.show {
-            opacity: 1;
-        }
-
-        .alert-header {
-            display: grid;
-            grid-template-columns: auto 1fr auto auto;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 8px;
+            background: #f4f8fe;
+            color: #35567e;
             font-size: 13px;
         }
 
-        .alert-number {
-            font-weight: bold;
-            color: #666;
-            min-width: 40px;
+        .status.good {
+            background: #eaf8ef;
+            color: #175e39;
         }
 
-        .alert-type {
-            color: #333;
-            font-weight: 500;
+        .status.bad {
+            background: #fdebec;
+            color: #9b1d22;
         }
 
-        .alert-time {
-            color: #999;
+        pre {
+            margin: 0;
+            background: #0e1726;
+            color: #dce6f6;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 160px;
+            overflow: auto;
             font-size: 12px;
-            white-space: nowrap;
         }
 
-        .alert-header .alert-severity {
-            padding: 3px 10px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: bold;
-            color: white;
-            white-space: nowrap;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
         }
 
-        .alert-description {
-            margin: 8px 0 0 0;
-            color: #555;
-            line-height: 1.4;
-            font-size: 14px;
+        th, td {
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            padding: 8px 6px;
         }
 
-        .alert-metadata {
-            display: flex;
-            gap: 16px;
-            font-size: 11px;
-            color: #999;
-            margin-top: 8px;
-        }
-
-        .alert-close {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            color: #ccc;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
-        }
-
-        .alert-close:hover {
-            color: #999;
-        }
-
-        /* Severity colors */
-        .severity-high {
-            background: #ffebee;
-            border-left-color: #d32f2f;
-        }
-
-        .severity-high .alert-severity {
-            background: #d32f2f;
-        }
-
-        .severity-medium {
-            background: #fff3e0;
-            border-left-color: #f57c00;
-        }
-
-        .severity-medium .alert-severity {
-            background: #f57c00;
-        }
-
-        .severity-low {
-            background: #e8f5e9;
-            border-left-color: #388e3c;
-        }
-
-        .severity-low .alert-severity {
-            background: #388e3c;
-        }
-
-        .stats {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+        .chip {
             font-size: 12px;
-            color: #666;
+            border-radius: 99px;
+            padding: 3px 9px;
+            color: #fff;
+            display: inline-block;
+        }
+
+        .low { background: var(--success); }
+        .medium { background: var(--warn); }
+        .high { background: var(--danger); }
+
+        .muted {
+            color: var(--muted);
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🚨 SecuWatch 2.0 - Real-Time Alerts</h1>
-            <p style="color: #666; margin-bottom: 15px;">Live alert stream from your security monitoring system</p>
-            
-            <div class="header-controls">
-                <div id="status" class="status disconnected">
-                    <span class="status-dot"></span>
-                    <span id="status-text">Disconnected</span>
-                </div>
-                <button id="connectBtn" onclick="connectToAlerts()">Connect</button>
-                <button id="disconnectBtn" onclick="disconnectFromAlerts()" disabled>Disconnect</button>
-                <button id="clearBtn" onclick="clearAlerts()" class="danger">Clear Alerts</button>
-            </div>
-        </div>
+        <section class="panel">
+            <h1>SecuWatch Test Console</h1>
+            <p>Use this page to validate login, device creation, and whether your agent is generating alerts.</p>
+        </section>
 
-        <div class="alerts-section">
-            <h2>📋 Alert Stream</h2>
-            <div id="alerts-container"></div>
-            <div class="stats">
-                <strong id="alert-count">Total Alerts: 0</strong>
+        <section class="panel">
+            <h2>1) API Setup + Login</h2>
+            <div class="grid" style="margin-bottom: 10px;">
+                <div>
+                    <label for="apiBase">API Base URL</label>
+                    <input id="apiBase" value="http://localhost:8000" />
+                </div>
+                <div>
+                    <label for="email">Email</label>
+                    <input id="email" placeholder="user@example.com" />
+                </div>
+                <div>
+                    <label for="password">Password</label>
+                    <input id="password" type="password" placeholder="minimum 8 chars" />
+                </div>
             </div>
-        </div>
+            <div class="row">
+                <button id="loginBtn">Login</button>
+                <button id="meBtn" class="ghost">Who Am I</button>
+                <button id="logoutBtn" class="danger">Forget Tokens</button>
+                <div id="authStatus" class="status">Not logged in</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <div class="muted">Token preview</div>
+                <pre id="tokenPreview">{}</pre>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>2) Devices</h2>
+            <div class="grid" style="margin-bottom: 10px;">
+                <div>
+                    <label for="deviceName">Device Name</label>
+                    <input id="deviceName" placeholder="agent-device-1" />
+                </div>
+                <div>
+                    <label for="deviceType">Device Type</label>
+                    <select id="deviceType">
+                        <option value="linux">Linux</option>
+                        <option value="windows">Windows</option>
+                        <option value="web">Web</option>
+                        <option value="application">Application</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row" style="margin-bottom: 10px;">
+                <button id="addDeviceBtn">Add Device</button>
+                <button id="listDevicesBtn" class="ghost">List Devices</button>
+            </div>
+            <pre id="deviceCreateOutput">No device added yet.</pre>
+            <div style="margin-top: 10px; overflow: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Last Seen</th>
+                            <th>Alerts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devicesBody">
+                        <tr><td colspan="6" class="muted">No devices loaded.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>3) Alerts (REST + WebSocket)</h2>
+            <div class="row" style="margin-bottom: 10px;">
+                <button id="connectWsBtn">Connect WebSocket</button>
+                <button id="disconnectWsBtn" class="danger">Disconnect WebSocket</button>
+                <button id="fetchAlertsBtn" class="ghost">Fetch Recent Alerts</button>
+                <button id="clearAlertsBtn" class="ghost">Clear View</button>
+                <div id="wsStatus" class="status">WebSocket disconnected</div>
+            </div>
+            <div style="overflow: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Severity</th>
+                            <th>Type</th>
+                            <th>Device ID</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsBody">
+                        <tr><td colspan="5" class="muted">No alerts yet.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
-    <script src="alert-client.js"></script>
     <script>
-        // Configuration
-        const WEBSOCKET_URL = 'ws://localhost:8000/ws/alerts';
-        
-        // Global instances
-        let alertClient = null;
-        let displayManager = null;
-        let alertCount = 0;
+        let accessToken = "";
+        let refreshToken = "";
+        let ws = null;
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            displayManager = new AlertDisplayManager('alerts-container', {
-                maxAlerts: 50,
-                autoRemoveDelay: 0  // Don't auto-remove
+        const apiBaseInput = document.getElementById("apiBase");
+        const authStatus = document.getElementById("authStatus");
+        const wsStatus = document.getElementById("wsStatus");
+        const tokenPreview = document.getElementById("tokenPreview");
+        const deviceCreateOutput = document.getElementById("deviceCreateOutput");
+        const devicesBody = document.getElementById("devicesBody");
+        const alertsBody = document.getElementById("alertsBody");
+
+        function apiBase() {
+            return apiBaseInput.value.trim().replace(/\/$/, "");
+        }
+
+        function wsUrl() {
+            const base = apiBase();
+            if (base.startsWith("https://")) {
+                return base.replace("https://", "wss://") + "/ws/alerts";
+            }
+            return base.replace("http://", "ws://") + "/ws/alerts";
+        }
+
+        function setAuthStatus(message, ok) {
+            authStatus.textContent = message;
+            authStatus.className = "status " + (ok ? "good" : "bad");
+        }
+
+        function setWsStatus(message, ok) {
+            wsStatus.textContent = message;
+            wsStatus.className = "status " + (ok ? "good" : "bad");
+        }
+
+        function authHeaders() {
+            const headers = { "Content-Type": "application/json" };
+            if (accessToken) {
+                headers.Authorization = "Bearer " + accessToken;
+            }
+            return headers;
+        }
+
+        function showError(text) {
+            alert(text);
+        }
+
+        async function request(path, options = {}) {
+            const response = await fetch(apiBase() + path, {
+                ...options,
+                headers: { ...authHeaders(), ...(options.headers || {}) }
             });
+            const contentType = response.headers.get("content-type") || "";
+            const body = contentType.includes("application/json")
+                ? await response.json()
+                : await response.text();
+
+            if (!response.ok) {
+                const detail = body && body.detail ? body.detail : JSON.stringify(body);
+                throw new Error(path + " failed: " + response.status + " - " + detail);
+            }
+
+            return body;
+        }
+
+        function renderTokenPreview() {
+            tokenPreview.textContent = JSON.stringify(
+                {
+                    has_access_token: !!accessToken,
+                    has_refresh_token: !!refreshToken,
+                    access_token_preview: accessToken ? accessToken.slice(0, 24) + "..." : null,
+                    refresh_token_preview: refreshToken ? refreshToken.slice(0, 24) + "..." : null
+                },
+                null,
+                2
+            );
+        }
+
+        function formatTime(value) {
+            if (!value) return "-";
+            return new Date(value).toLocaleString();
+        }
+
+        function severityClass(severity) {
+            const s = (severity || "").toLowerCase();
+            if (s === "high") return "high";
+            if (s === "medium") return "medium";
+            return "low";
+        }
+
+        function appendAlertRow(alert) {
+            const empty = alertsBody.querySelector(".muted");
+            if (empty) alertsBody.innerHTML = "";
+
+            const row = document.createElement("tr");
+            const cls = severityClass(alert.severity);
+            row.innerHTML = `
+                <td>${formatTime(alert.created_at)}</td>
+                <td><span class="chip ${cls}">${alert.severity || "LOW"}</span></td>
+                <td>${alert.type || "-"}</td>
+                <td>${alert.device_id || "-"}</td>
+                <td>${alert.description || "-"}</td>
+            `;
+            alertsBody.insertBefore(row, alertsBody.firstChild);
+        }
+
+        document.getElementById("loginBtn").addEventListener("click", async () => {
+            try {
+                const payload = {
+                    email: document.getElementById("email").value.trim(),
+                    password: document.getElementById("password").value
+                };
+                const data = await request("/auth/login", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                accessToken = data.access_token || "";
+                refreshToken = data.refresh_token || "";
+                renderTokenPreview();
+                setAuthStatus("Login success", true);
+            } catch (error) {
+                setAuthStatus("Login failed", false);
+                showError(error.message);
+            }
         });
 
-        /**
-         * Connect to the WebSocket alert stream
-         */
-        function connectToAlerts() {
-            if (alertClient && alertClient.isConnected()) {
-                console.warn('Already connected');
-                return;
+        document.getElementById("meBtn").addEventListener("click", async () => {
+            try {
+                const me = await request("/auth/me");
+                setAuthStatus("Authenticated as " + me.email, true);
+            } catch (error) {
+                setAuthStatus("Not authenticated", false);
+                showError(error.message);
             }
+        });
 
-            alertClient = new AlertClient(WEBSOCKET_URL, {
-                reconnectInterval: 3000,
-                maxReconnectAttempts: 5
-            });
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            accessToken = "";
+            refreshToken = "";
+            renderTokenPreview();
+            setAuthStatus("Tokens removed", false);
+        });
 
-            // Set up callbacks
-            alertClient.onConnect = () => {
-                updateStatus(true);
-                console.log('Connected to alert stream');
-            };
-
-            alertClient.onDisconnect = () => {
-                updateStatus(false);
-                console.log('Disconnected from alert stream');
-            };
-
-            alertClient.onError = (error) => {
-                console.error('Alert client error:', error);
-                updateStatus(false);
-            };
-
-            alertClient.onAlert = (alert) => {
-                alertCount++;
-                displayManager.displayAlert(alert);
-                document.getElementById('alert-count').textContent = `Total Alerts: ${alertCount}`;
-                console.log('Alert displayed:', alert);
-            };
-
-            // Connect
-            alertClient.connect();
-        }
-
-        /**
-         * Disconnect from the WebSocket
-         */
-        function disconnectFromAlerts() {
-            if (alertClient) {
-                alertClient.disconnect();
-                updateStatus(false);
+        document.getElementById("addDeviceBtn").addEventListener("click", async () => {
+            try {
+                const device_name = document.getElementById("deviceName").value.trim();
+                const device_type = document.getElementById("deviceType").value;
+                const created = await request("/devices", {
+                    method: "POST",
+                    body: JSON.stringify({ device_name, device_type })
+                });
+                deviceCreateOutput.textContent = JSON.stringify(created, null, 2);
+            } catch (error) {
+                showError(error.message);
             }
-        }
+        });
 
-        /**
-         * Clear all displayed alerts
-         */
-        function clearAlerts() {
-            if (displayManager) {
-                displayManager.clearAlerts();
+        document.getElementById("listDevicesBtn").addEventListener("click", async () => {
+            try {
+                const devices = await request("/devices");
+                if (!devices.length) {
+                    devicesBody.innerHTML = '<tr><td colspan="6" class="muted">No devices found.</td></tr>';
+                    return;
+                }
+
+                devicesBody.innerHTML = "";
+                devices.forEach((device) => {
+                    const row = document.createElement("tr");
+                    const summary = device.alerts_summary || { total: 0, high: 0, medium: 0, low: 0 };
+                    row.innerHTML = `
+                        <td>${device.id}</td>
+                        <td>${device.device_name}</td>
+                        <td>${device.device_type}</td>
+                        <td>${device.status}</td>
+                        <td>${formatTime(device.last_seen)}</td>
+                        <td>T:${summary.total} H:${summary.high} M:${summary.medium} L:${summary.low}</td>
+                    `;
+                    devicesBody.appendChild(row);
+                });
+            } catch (error) {
+                showError(error.message);
             }
-        }
+        });
 
-        /**
-         * Update connection status UI
-         */
-        function updateStatus(connected) {
-            const statusEl = document.getElementById('status');
-            const statusText = document.getElementById('status-text');
-            const connectBtn = document.getElementById('connectBtn');
-            const disconnectBtn = document.getElementById('disconnectBtn');
+        document.getElementById("connectWsBtn").addEventListener("click", () => {
+            try {
+                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                    return;
+                }
 
-            if (connected) {
-                statusEl.classList.remove('disconnected');
-                statusEl.classList.add('connected');
-                statusText.textContent = 'Connected';
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
-            } else {
-                statusEl.classList.remove('connected');
-                statusEl.classList.add('disconnected');
-                statusText.textContent = 'Disconnected';
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
+                ws = new WebSocket(wsUrl());
+                ws.onopen = () => setWsStatus("WebSocket connected", true);
+                ws.onclose = () => setWsStatus("WebSocket disconnected", false);
+                ws.onerror = () => setWsStatus("WebSocket error", false);
+                ws.onmessage = (event) => {
+                    try {
+                        appendAlertRow(JSON.parse(event.data));
+                    } catch {
+                        // Ignore malformed payloads in test UI.
+                    }
+                };
+            } catch (error) {
+                showError(error.message);
             }
-        }
+        });
 
-        // Add CSS styles for alerts
-        const style = document.createElement('style');
-        style.textContent = `
-            ${ALERT_STYLES}
-        `;
-        document.head.appendChild(style);
+        document.getElementById("disconnectWsBtn").addEventListener("click", () => {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            setWsStatus("WebSocket disconnected", false);
+        });
+
+        document.getElementById("fetchAlertsBtn").addEventListener("click", async () => {
+            try {
+                const data = await request("/alerts?limit=25&page=1");
+                const alerts = data.alerts || [];
+                alertsBody.innerHTML = "";
+                if (!alerts.length) {
+                    alertsBody.innerHTML = '<tr><td colspan="5" class="muted">No alerts found.</td></tr>';
+                    return;
+                }
+                alerts.forEach((alert) => appendAlertRow(alert));
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        document.getElementById("clearAlertsBtn").addEventListener("click", () => {
+            alertsBody.innerHTML = '<tr><td colspan="5" class="muted">No alerts yet.</td></tr>';
+        });
+
+        renderTokenPreview();
+        setAuthStatus("Not logged in", false);
+        setWsStatus("WebSocket disconnected", false);
     </script>
 </body>
 </html>
