@@ -71,7 +71,26 @@ class EventDispatcher:
 
         if alert_data:
             try:
-                alert = self.alert_service.create_alert(log.device, alert_data)
+                alert = self.alert_service.create_alert(
+                    log.device,
+                    alert_data,
+                    raw_log={
+                        "log_id": log.id,
+                        "device_id": log.device_id,
+                        "device_type": log.device.device_type,
+                        "message": log.message,
+                        "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                    },
+                )
+                if alert is None:
+                    logger.info(
+                        "Dispatcher suppressed duplicate alert for log_id=%s, device_id=%s, type=%s, severity=%s",
+                        log.id,
+                        log.device_id,
+                        alert_data.type,
+                        alert_data.severity,
+                    )
+                    return
                 event_context["alerts_generated"].append(
                     {
                         "alert_id": alert.id,

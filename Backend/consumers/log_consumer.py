@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from hashlib import sha256
 from typing import Any
 
 from kafka import KafkaConsumer
@@ -14,12 +13,9 @@ from app.models.log import Log
 from app.services.alert_engine import AlertData, get_alert_engine
 from app.services.alert_service import AlertService
 from app.services.kafka_producer import ensure_topics_exist, produce_alert_event
-from app.utils.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-redis_client = get_redis_client()
 
 
 def _bootstrap_servers() -> list[str]:
@@ -35,18 +31,6 @@ def _build_consumer() -> KafkaConsumer:
         enable_auto_commit=True,
         value_deserializer=lambda raw: json.loads(raw.decode("utf-8")),
     )
-
-
-def _dedupe_key(log_id: int, alert_data: AlertData) -> str:
-    raw = f"{log_id}:{alert_data.type}:{alert_data.severity}:{alert_data.description}"
-    digest = sha256(raw.encode("utf-8")).hexdigest()
-    return f"alerts:dedupe:{digest}"
-
-
-def _is_duplicate_alert(log_id: int, alert_data: AlertData) -> bool:
-    key = _dedupe_key(log_id, alert_data)
-    created = redis_client.set(key, "1", ex=3600, nx=True)
-    return not bool(created)
 
 
 def _process_log_message(payload: dict[str, Any]) -> None:
@@ -73,12 +57,27 @@ def _process_log_message(payload: dict[str, Any]) -> None:
         if alert_data is None:
             return
 
-        if _is_duplicate_alert(log.id, alert_data):
-            logger.info("Duplicate alert suppressed for log id %s", log.id)
-            return
-
         alert_service = AlertService(db)
-        alert = alert_service.create_alert(log.device, alert_data)
+        alert = alert_service.create_alert(
+            log.device,
+            alert_data,
+            raw_log={
+                "log_id": log.id,
+                "device_id": log.device_id,
+                "device_type": log.device.device_type,
+                "message": log.message,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            },
+        )
+        if alert is None:
+            logger.info(
+                "Consumer suppressed duplicate alert for log_id=%s, device_id=%s, type=%s, severity=%s",
+                log.id,
+                log.device_id,
+                alert_data.type,
+                alert_data.severity,
+            )
+            return
         published = produce_alert_event(
             {
                 "id": alert.id,
