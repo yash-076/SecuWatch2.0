@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, engine, ensure_database_exists
-from app.models import Alert, Device, Log, RefreshToken, User
+from app.models import Alert, AlertActivity, Device, Log, Organization, RefreshToken, User
+from app.routes.alert_management import router as alert_management_router
 from app.routes.ai import router as ai_router
 from app.routes.alerts import router as alerts_router
 from app.routes.auth import router as auth_router
@@ -46,17 +47,26 @@ async def on_startup() -> None:
 
     ensure_database_exists()
     Base.metadata.create_all(bind=engine)
+    
     ws_manager.set_event_loop(asyncio.get_running_loop())
+    ws_manager.start_redis_relay()
+    
     try:
         ensure_topics_exist()
     except Exception as exc:
         logger.warning(f"Kafka topic setup skipped: {exc}")
 
 
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    ws_manager.stop_redis_relay()
+
+
 app.include_router(auth_router)
 app.include_router(devices_router)
 app.include_router(heartbeat_router)
 app.include_router(alerts_router)
+app.include_router(alert_management_router)
 app.include_router(logs_router)
 app.include_router(websocket_router)
 app.include_router(ai_router)

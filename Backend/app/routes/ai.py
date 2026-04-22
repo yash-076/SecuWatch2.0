@@ -33,6 +33,16 @@ def analyze_alert(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Alert not found",
                 )
+
+            stored_analysis = alert_service.get_alert_analysis_by_id_for_user(
+                user=current_user,
+                alert_id=payload.alert_id,
+            )
+            if stored_analysis:
+                return AnalyzeAlertResponse(
+                    alert_id=payload.alert_id,
+                    analysis=AlertAnalysisResult(**stored_analysis),
+                )
         else:
             alert_data = payload.alert.model_dump() if payload.alert else None
 
@@ -43,6 +53,8 @@ def analyze_alert(
             )
 
         analysis = ai_service.analyze_alert(alert_data)
+        if payload.alert_id is not None:
+            alert_service.upsert_alert_analysis(payload.alert_id, analysis)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 

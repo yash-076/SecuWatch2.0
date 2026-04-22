@@ -107,45 +107,94 @@ class AIService:
         if not api_key:
             raise ValueError("LLM API key not configured")
 
-        payload = {
-            "model": settings.llm_model,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "temperature": 0.2,
-        }
-
-        request = Request(
-            settings.llm_api_url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            },
-            method="POST",
-        )
-
         timeout_seconds = max(1, settings.llm_timeout_seconds)
-        try:
-            with urlopen(request, timeout=timeout_seconds) as response:
-                body = response.read().decode("utf-8")
-        except HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="ignore")
-            raise ValueError(f"LLM request failed with status {exc.code}: {detail}") from exc
-        except URLError as exc:
-            raise ValueError(f"LLM request failed: {exc.reason}") from exc
+        model_candidates = self._model_candidates()
+        saw_quota_error = False
+        saw_unavailable_error = False
+        last_error: ValueError | None = None
 
-        data = json.loads(body)
-        choices = data.get("choices") or []
-        if not choices:
-            raise ValueError("LLM returned no choices")
+        for model_name in model_candidates:
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.2,
+            }
 
-        content = choices[0].get("message", {}).get("content", "")
-        if not content:
-            raise ValueError("LLM returned empty response")
+            request = Request(
+                settings.llm_api_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+                method="POST",
+            )
 
-        return content
+            try:
+                with urlopen(request, timeout=timeout_seconds) as response:
+                    body = response.read().decode("utf-8")
+            except HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="ignore")
+                detail_lower = detail.lower()
+                if exc.code == 429 or "quota exceeded" in detail_lower or "resource_exhausted" in detail_lower:
+                    saw_quota_error = True
+                    last_error = ValueError("AI quota limit reached")
+                    continue
+                if exc.code == 503 or "status\": \"unavailable\"" in detail_lower or "high demand" in detail_lower:
+                    saw_unavailable_error = True
+                    last_error = ValueError("AI service temporarily unavailable")
+                    continue
+                if exc.code in {400, 404} and self._is_model_unavailable_error(detail_lower):
+                    last_error = ValueError(f"Model unavailable: {model_name}")
+                    continue
+                raise ValueError(f"LLM request failed with status {exc.code}: {detail}") from exc
+            except URLError as exc:
+                raise ValueError(f"LLM request failed: {exc.reason}") from exc
+
+            data = json.loads(body)
+            choices = data.get("choices") or []
+            if not choices:
+                last_error = ValueError("LLM returned no choices")
+                continue
+
+            content = choices[0].get("message", {}).get("content", "")
+            if not content:
+                last_error = ValueError("LLM returned empty response")
+                continue
+
+            return content
+
+        if saw_quota_error:
+            raise ValueError("AI quota limit reached")
+        if saw_unavailable_error:
+            raise ValueError("AI service temporarily unavailable")
+        if last_error:
+            raise last_error
+        raise ValueError("LLM request failed")
+
+    @staticmethod
+    def _model_candidates() -> list[str]:
+        primary = settings.llm_model.strip()
+        fallback_raw = settings.llm_fallback_models or ""
+        fallback = [model.strip() for model in fallback_raw.split(",") if model.strip()]
+
+        models: list[str] = []
+        for model in [primary, *fallback]:
+            if model and model not in models:
+                models.append(model)
+        return models
+
+    @staticmethod
+    def _is_model_unavailable_error(detail_lower: str) -> bool:
+        return "model" in detail_lower and (
+            "not found" in detail_lower
+            or "unsupported" in detail_lower
+            or "not available" in detail_lower
+            or "invalid" in detail_lower
+        )
 
     @staticmethod
     def _parse_json_response(content: str) -> dict:

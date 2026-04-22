@@ -22,6 +22,7 @@ class AlertClient {
     this.reconnectInterval = options.reconnectInterval || 3000;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     this.reconnectAttempts = 0;
+    this.token = options.token || null;
     
     // Callbacks
     this.onAlert = null;
@@ -35,7 +36,10 @@ class AlertClient {
    */
   connect() {
     try {
-      this.ws = new WebSocket(this.url);
+      const wsUrl = this.token
+        ? this.appendToken(this.url, this.token)
+        : this.url;
+      this.ws = new WebSocket(wsUrl);
       
       this.ws.onopen = () => this.handleOpen();
       this.ws.onmessage = (event) => this.handleMessage(event);
@@ -47,6 +51,11 @@ class AlertClient {
         this.onError(error);
       }
     }
+  }
+
+  appendToken(url, token) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}token=${encodeURIComponent(token)}`;
   }
 
   /**

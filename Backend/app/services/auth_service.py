@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.organization import Organization
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.utils.jwt import TokenType, create_access_token, create_refresh_token, decode_token
@@ -13,12 +14,32 @@ class AuthService:
     def __init__(self, db: Session):
         self.db = db
 
-    def register_user(self, email: str, password: str) -> User:
+    def register_user(self, email: str, password: str, organization_name: str, role: str) -> User:
         existing_user = self.db.scalar(select(User).where(User.email == email))
         if existing_user:
             raise ValueError("Email already registered")
 
-        user = User(email=email, password_hash=hash_password(password))
+        normalized_org_name = organization_name.strip()
+        if not normalized_org_name:
+            raise ValueError("Organization name is required")
+
+        normalized_role = role.strip().lower()
+        valid_roles = {item.value for item in User.Role}
+        if normalized_role not in valid_roles:
+            raise ValueError("Role must be either admin or analyst")
+
+        organization = self.db.scalar(select(Organization).where(Organization.name == normalized_org_name))
+        if not organization:
+            organization = Organization(name=normalized_org_name)
+            self.db.add(organization)
+            self.db.flush()
+
+        user = User(
+            email=email,
+            password_hash=hash_password(password),
+            organization_id=organization.id,
+            role=User.Role(normalized_role),
+        )
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)
@@ -29,7 +50,7 @@ class AuthService:
         if not user or not verify_password(password, user.password_hash):
             raise ValueError("Invalid email or password")
 
-        access_token = create_access_token(subject=str(user.id))
+        access_token = create_access_token(subject=str(user.id), organization_id=user.organization_id)
         refresh_token, refresh_expires_at = create_refresh_token(subject=str(user.id))
         self._persist_refresh_token(user.id, refresh_token, refresh_expires_at)
         return access_token, refresh_token
@@ -50,7 +71,10 @@ class AuthService:
             self.db.commit()
             raise ValueError("Refresh token expired")
 
-        access_token = create_access_token(subject=str(token_record.user_id))
+        user = self.db.scalar(select(User).where(User.id == token_record.user_id))
+        if not user:
+            raise ValueError("User not found")
+        access_token = create_access_token(subject=str(token_record.user_id), organization_id=user.organization_id)
 
         if not rotate:
             return access_token, None

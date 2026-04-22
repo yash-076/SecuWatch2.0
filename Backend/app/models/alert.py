@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -13,6 +14,12 @@ class AlertSeverity:
     HIGH = "HIGH"
     
     VALID_LEVELS = {LOW, MEDIUM, HIGH}
+
+
+class AlertStatus(str, Enum):
+    NEW = "NEW"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
 
 
 class Alert(Base):
@@ -30,6 +37,29 @@ class Alert(Base):
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     raw_log: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    status: Mapped[AlertStatus] = mapped_column(
+        SQLEnum(AlertStatus, name="alert_status", native_enum=False),
+        nullable=False,
+        default=AlertStatus.NEW,
+    )
+    assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_role: Mapped[str | None] = mapped_column(String(50), nullable=True, default="analyst")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
 
     device = relationship("Device", back_populates="alerts")
+    assignee = relationship("User", back_populates="assigned_alerts", foreign_keys=[assigned_to])
+    activities = relationship(
+        "AlertActivity",
+        back_populates="alert",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

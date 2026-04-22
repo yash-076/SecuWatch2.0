@@ -293,10 +293,11 @@
 
         function wsUrl() {
             const base = apiBase();
+            const tokenQuery = accessToken ? `?token=${encodeURIComponent(accessToken)}` : "";
             if (base.startsWith("https://")) {
-                return base.replace("https://", "wss://") + "/ws/alerts";
+                return base.replace("https://", "wss://") + "/ws/alerts" + tokenQuery;
             }
-            return base.replace("http://", "ws://") + "/ws/alerts";
+            return base.replace("http://", "ws://") + "/ws/alerts" + tokenQuery;
         }
 
         function setAuthStatus(message, ok) {

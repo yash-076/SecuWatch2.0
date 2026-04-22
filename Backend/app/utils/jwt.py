@@ -11,7 +11,7 @@ class TokenType:
     REFRESH = "refresh"
 
 
-def _build_token(subject: str, token_type: str, expires_delta: timedelta) -> str:
+def _build_token(subject: str, token_type: str, expires_delta: timedelta, organization_id: int | None = None) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": subject,
@@ -20,12 +20,14 @@ def _build_token(subject: str, token_type: str, expires_delta: timedelta) -> str
         "exp": int((now + expires_delta).timestamp()),
         "jti": str(uuid4()),
     }
+    if organization_id is not None:
+        payload["org_id"] = organization_id
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, organization_id: int | None = None) -> str:
     expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
-    return _build_token(subject=subject, token_type=TokenType.ACCESS, expires_delta=expires_delta)
+    return _build_token(subject=subject, token_type=TokenType.ACCESS, expires_delta=expires_delta, organization_id=organization_id)
 
 
 def create_refresh_token(subject: str) -> tuple[str, datetime]:

@@ -18,7 +18,12 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, auth_service: AuthService = Depends(get_auth_service)):
     try:
-        user = auth_service.register_user(email=payload.email, password=payload.password)
+        user = auth_service.register_user(
+            email=payload.email,
+            password=payload.password,
+            organization_name=payload.organization_name,
+            role=payload.role,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return user

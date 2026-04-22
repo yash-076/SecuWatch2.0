@@ -82,6 +82,7 @@ def _process_log_message(payload: dict[str, Any]) -> None:
             {
                 "id": alert.id,
                 "device_id": alert.device_id,
+                "organization_id": log.device.user.organization_id,
                 "type": alert.type,
                 "severity": alert.severity,
                 "description": alert.description,

@@ -107,11 +107,11 @@ class EventDispatcher:
                     alert.severity,
                 )
                 # Broadcast the new alert to all connected WebSocket clients
-                self._broadcast_alert(alert)
+                self._broadcast_alert(alert, log.device.user.organization_id)
             except ValueError as e:
                 raise ValueError(f"Failed to create alert: {str(e)}")
 
-    def _broadcast_alert(self, alert) -> None:
+    def _broadcast_alert(self, alert, organization_id: int) -> None:
         """
         Broadcast a newly created alert to all connected WebSocket clients.
         
@@ -125,6 +125,7 @@ class EventDispatcher:
         message = {
             "id": alert.id,
             "device_id": alert.device_id,
+            "organization_id": organization_id,
             "type": alert.type,
             "severity": alert.severity,
             "description": alert.description,

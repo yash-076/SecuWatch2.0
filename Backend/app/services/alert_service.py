@@ -4,11 +4,13 @@ from hashlib import sha256
 import json
 from typing import Any
 
-from sqlalchemy import asc, desc, func, select
+from sqlalchemy import String, asc, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models.alert import Alert, AlertSeverity
+from app.models.alert import Alert, AlertSeverity, AlertStatus
+from app.models.alert_ai_analysis import AlertAIAnalysis
+from app.models.alert_activity import AlertActivity, AlertActivityAction
 from app.models.device import Device
 from app.models.user import User
 from app.services.alert_engine.base import AlertData
@@ -73,9 +75,24 @@ class AlertService:
             description=alert_data.description,
             raw_log=json.dumps(raw_log, default=str) if raw_log else None,
             created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            status=AlertStatus.NEW,
+            assigned_to=None,
+            assigned_role="analyst",
         )
 
         self.db.add(alert)
+        self.db.flush()
+
+        self.db.add(
+            AlertActivity(
+                alert_id=alert.id,
+                user_id=device.user_id,
+                action=AlertActivityAction.CREATED,
+                note="Alert created from device event",
+                created_at=datetime.now(timezone.utc),
+            )
+        )
         self.db.commit()
         self.db.refresh(alert)
 
@@ -186,17 +203,6 @@ class AlertService:
         sort_by: str = "created_at",
         order: str = "desc",
     ) -> tuple[list[dict], int]:
-        user_device_ids = list(self.db.scalars(select(Device.id).where(Device.user_id == user.id)))
-        if not user_device_ids:
-            return [], 0
-
-        if device_id is not None:
-            if device_id not in user_device_ids:
-                return [], 0
-            scoped_device_ids = [device_id]
-        else:
-            scoped_device_ids = user_device_ids
-
         query = (
             select(
                 Alert.id,
@@ -204,15 +210,28 @@ class AlertService:
                 Alert.type,
                 Alert.severity,
                 Alert.description,
+                Alert.status,
+                Alert.assigned_to,
+                Alert.assigned_role,
                 Alert.created_at,
+                Alert.updated_at,
             )
-            .where(Alert.device_id.in_(scoped_device_ids))
+            .join(Device, Device.id == Alert.device_id)
+            .join(User, User.id == Device.user_id)
+            .where(User.organization_id == user.organization_id)
         )
 
+        if device_id is not None:
+            query = query.where(Alert.device_id == device_id)
+
         if severity:
-            if severity not in AlertSeverity.VALID_LEVELS:
+            normalized_severity = severity.strip().upper()
+            if normalized_severity not in AlertSeverity.VALID_LEVELS:
                 raise ValueError("Invalid severity value")
-            query = query.where(Alert.severity == severity)
+            # Compare against text in lowercase so filters work even if DB stores mixed-case values.
+            query = query.where(
+                func.lower(Alert.severity.cast(String)) == normalized_severity.lower()
+            )
 
         if from_time:
             query = query.where(Alert.created_at >= from_time)
@@ -258,15 +277,89 @@ class AlertService:
                     Alert.type,
                     Alert.severity,
                     Alert.description,
+                    Alert.status,
+                    Alert.assigned_to,
+                    Alert.assigned_role,
                     Alert.created_at,
+                    Alert.updated_at,
                 )
                 .join(Device, Device.id == Alert.device_id)
-                .where(Alert.id == alert_id, Device.user_id == user.id)
+                .join(User, User.id == Device.user_id)
+                .where(Alert.id == alert_id, User.organization_id == user.organization_id)
             )
             .mappings()
             .first()
         )
         return dict(row) if row else None
+
+    def get_alert_analysis_by_id_for_user(self, user: User, alert_id: int) -> dict | None:
+        row = (
+            self.db.execute(
+                select(
+                    AlertAIAnalysis.alert_id,
+                    AlertAIAnalysis.explanation,
+                    AlertAIAnalysis.why_it_happened,
+                    AlertAIAnalysis.risk_level_reasoning,
+                    AlertAIAnalysis.mitigation_steps,
+                    AlertAIAnalysis.model_used,
+                    AlertAIAnalysis.updated_at,
+                )
+                .select_from(AlertAIAnalysis)
+                .join(Alert, Alert.id == AlertAIAnalysis.alert_id)
+                .join(Device, Device.id == Alert.device_id)
+                .join(User, User.id == Device.user_id)
+                .where(Alert.id == alert_id, User.organization_id == user.organization_id)
+            )
+            .mappings()
+            .first()
+        )
+        if not row:
+            return None
+
+        mitigation_steps_raw = row.get("mitigation_steps")
+        mitigation_steps: list[str] = []
+        if isinstance(mitigation_steps_raw, str):
+            try:
+                parsed = json.loads(mitigation_steps_raw)
+                if isinstance(parsed, list):
+                    mitigation_steps = [str(step).strip() for step in parsed if str(step).strip()]
+            except json.JSONDecodeError:
+                mitigation_steps = []
+
+        return {
+            "explanation": str(row.get("explanation") or "").strip(),
+            "why_it_happened": str(row.get("why_it_happened") or "").strip(),
+            "risk_level_reasoning": str(row.get("risk_level_reasoning") or "").strip(),
+            "mitigation_steps": mitigation_steps,
+        }
+
+    def upsert_alert_analysis(self, alert_id: int, analysis: dict) -> None:
+        now = datetime.now(timezone.utc)
+        mitigation_steps = analysis.get("mitigation_steps") or []
+        mitigation_steps_json = json.dumps([str(step).strip() for step in mitigation_steps if str(step).strip()])
+
+        existing = self.db.get(AlertAIAnalysis, alert_id)
+        if existing is None:
+            existing = AlertAIAnalysis(
+                alert_id=alert_id,
+                explanation=str(analysis.get("explanation", "")).strip(),
+                why_it_happened=str(analysis.get("why_it_happened", "")).strip(),
+                risk_level_reasoning=str(analysis.get("risk_level_reasoning", "")).strip(),
+                mitigation_steps=mitigation_steps_json,
+                model_used=settings.llm_model,
+                created_at=now,
+                updated_at=now,
+            )
+            self.db.add(existing)
+        else:
+            existing.explanation = str(analysis.get("explanation", "")).strip()
+            existing.why_it_happened = str(analysis.get("why_it_happened", "")).strip()
+            existing.risk_level_reasoning = str(analysis.get("risk_level_reasoning", "")).strip()
+            existing.mitigation_steps = mitigation_steps_json
+            existing.model_used = settings.llm_model
+            existing.updated_at = now
+
+        self.db.commit()
 
     @staticmethod
     def _validate_alert_data(alert_data: AlertData) -> None:

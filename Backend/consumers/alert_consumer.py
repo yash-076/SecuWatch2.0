@@ -29,6 +29,13 @@ def _build_consumer() -> KafkaConsumer:
 
 
 def _process_alert(payload: dict[str, Any]) -> None:
+    if payload.get("organization_id") is None:
+        logger.warning(
+            "Skipping alert broadcast: missing organization_id in Kafka payload (keys=%s, alert_id=%s)",
+            list(payload.keys()),
+            payload.get("id"),
+        )
+        return
     ws_manager.broadcast_sync(payload)
 
 
