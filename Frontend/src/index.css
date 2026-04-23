@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+@layer components {
+  /* Card Base - Enhanced with better shadow and border */
+  .card-base {
+    @apply bg-soc-card border border-soc-border rounded-xl shadow-soc-md;
+    background: linear-gradient(135deg, #1e293b 0%, #1a1f2e 100%);
+  }
+
+  .card-base:hover {
+    @apply border-soc-secondary shadow-soc-lg transition-all duration-300;
+  }
+
+  /* Enhanced typography hierarchy */
+  .text-section-title {
+    @apply text-2xl font-bold text-soc-text tracking-tight;
+  }
+
+  .text-section-subtitle {
+    @apply text-sm text-soc-secondary;
+  }
+
+  .text-card-title {
+    @apply text-lg font-semibold text-soc-text mb-6;
+  }
+
+  .text-label {
+    @apply text-xs font-semibold text-soc-secondary uppercase tracking-wider;
+  }
+
+  .text-value {
+    @apply text-3xl font-bold text-soc-text;
+  }
+
+  /* Table styling */
+  .table-header {
+    @apply bg-soc-bg bg-opacity-50 border-b border-soc-border;
+  }
+
+  .table-row {
+    @apply border-b border-soc-border hover:bg-soc-bg transition-colors duration-150;
+  }
+
+  .table-row:last-child {
+    @apply border-b-0;
+  }
+
+  .table-cell {
+    @apply px-6 py-4 text-sm text-soc-text;
+  }
+
+  .table-cell-muted {
+    @apply px-6 py-4 text-sm text-soc-secondary;
+  }
+
+  /* Badge styling */
+  .badge-severity {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-status {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  /* Status indicator dot */
+  .status-dot {
+    @apply w-2.5 h-2.5 rounded-full inline-block mr-2;
+  }
+}
+
+@layer utilities {
+  /* Enhanced transition utilities */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-500 ease-out;
+  }
+
+  /* Enhanced hover effects */
+  .hover-lift {
+    @apply hover:shadow-soc-lg hover:scale-102 transition-smooth cursor-pointer;
+  }
+
+  .hover-effect {
+    @apply hover:bg-soc-bg transition-smooth cursor-pointer;
+  }
+
+  .hover-brighten {
+    @apply hover:bg-opacity-70 transition-smooth cursor-pointer;
+  }
+
+  /* Severity color utilities */
+  .severity-critical {
+    @apply text-soc-critical;
+  }
+
+  .severity-critical-bg {
+    @apply bg-red-500 bg-opacity-10 text-soc-critical border-l-4 border-soc-critical;
+  }
+
+  .severity-high {
+    @apply text-soc-high;
+  }
+
+  .severity-high-bg {
+    @apply bg-orange-500 bg-opacity-10 text-soc-high border-l-4 border-soc-high;
+  }
+
+  .severity-medium {
+    @apply text-soc-medium;
+  }
+
+  .severity-medium-bg {
+    @apply bg-yellow-500 bg-opacity-10 text-soc-medium border-l-4 border-soc-medium;
+  }
+
+  .severity-low {
+    @apply text-soc-low;
+  }
+
+  .severity-low-bg {
+    @apply bg-green-500 bg-opacity-10 text-soc-low border-l-4 border-soc-low;
+  }
+
+  .severity-info {
+    @apply text-soc-info;
+  }
+
+  .severity-info-bg {
+    @apply bg-blue-500 bg-opacity-10 text-soc-info border-l-4 border-soc-info;
+  }
+
+  /* Input styling */
+  .input-soc {
+    @apply bg-soc-bg border border-soc-border rounded-lg text-soc-text px-4 py-2 placeholder:text-soc-muted focus:outline-none focus:border-soc-info focus:ring-1 focus:ring-soc-info transition-smooth;
+  }
+
+  /* Button styling */
+  .btn-primary {
+    @apply px-4 py-2 bg-soc-info hover:bg-blue-600 text-white rounded-lg font-medium transition-smooth;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-soc-card hover:bg-soc-bg text-soc-text border border-soc-border rounded-lg font-medium transition-smooth;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-soc-critical hover:bg-red-500 text-white rounded-lg font-medium transition-smooth;
+  }
+
+  /* Fade and scale effects */
+  .scale-102 {
+    @apply scale-102;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-soc-info to-blue-400 bg-clip-text text-transparent;
+  }
+}
