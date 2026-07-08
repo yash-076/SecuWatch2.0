@@ -41,4 +41,8 @@ def heartbeat(
         device_id=updated_device.id,
         last_seen=updated_device.last_seen,
         status=get_device_status(updated_device.last_seen),
+        heartbeat_interval=updated_device.heartbeat_interval,
+        log_min_interval=updated_device.log_min_interval,
+        log_max_interval=updated_device.log_max_interval,
+        alert_config=updated_device.alert_config,
     )

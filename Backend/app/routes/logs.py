@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.dependencies import get_device_service, get_event_dispatcher, get_log_service
 from app.schemas.log import LogIngestRequest, LogIngestResponse
@@ -13,9 +13,23 @@ router = APIRouter(tags=["Logs"])
 logger = logging.getLogger(__name__)
 
 
+def _resolve_client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        candidate = forwarded_for.split(",")[0].strip()
+        if candidate:
+            return candidate[:64]
+
+    if request.client and request.client.host:
+        return request.client.host[:64]
+
+    return None
+
+
 @router.post("/logs", response_model=LogIngestResponse, status_code=status.HTTP_201_CREATED)
 def ingest_log(
     payload: LogIngestRequest,
+    request: Request,
     device_service: DeviceService = Depends(get_device_service),
     event_dispatcher: EventDispatcher = Depends(get_event_dispatcher),
     log_service: LogService = Depends(get_log_service),
@@ -71,7 +85,7 @@ def ingest_log(
 
     last_seen_updated = True
     try:
-        device_service.update_device_last_seen(device)
+        device_service.update_device_last_seen(device, ip_address=_resolve_client_ip(request))
     except Exception as exc:
         # Best effort backup heartbeat update; ingestion success should not be blocked.
         last_seen_updated = False

@@ -73,13 +73,23 @@ export default function Analytics() {
     return `${((resolvedAlerts.length / alerts.length) * 100).toFixed(1)}%`
   }, [alerts, resolvedAlerts])
 
+  const falsePositiveRate = useMemo(() => {
+    if (!resolvedAlerts.length) return '0.0%'
+    const fps = resolvedAlerts.filter((alert) => {
+      const desc = String(alert.description || '').toLowerCase()
+      const type = String(alert.type || '').toLowerCase()
+      return desc.includes('false positive') || desc.includes('fp') || type.includes('suspicious_ua')
+    }).length
+    return `${((fps / resolvedAlerts.length) * 100).toFixed(1)}%`
+  }, [resolvedAlerts])
+
   const summaryStats = [
     {
       label: 'Avg. Response Time',
       value: avgResponseHours !== null ? `${avgResponseHours.toFixed(1)} hrs` : 'N/A',
       trend: '-',
     },
-    { label: 'False Positive Rate', value: 'N/A', trend: '-' },
+    { label: 'False Positive Rate', value: falsePositiveRate, trend: '-' },
     {
       label: 'MTTR (Mean Time To Resolve)',
       value: avgResponseHours !== null ? `${avgResponseHours.toFixed(1)} hrs` : 'N/A',

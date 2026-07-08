@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.database import get_db
+from app.models.user import User
 from app.dependencies import get_auth_service, get_current_user
 from app.schemas.auth import (
     AccessTokenResponse,
@@ -64,3 +68,14 @@ def logout(payload: LogoutRequest, auth_service: AuthService = Depends(get_auth_
 @router.get("/me", response_model=UserOut)
 def me(current_user=Depends(get_current_user)):
     return current_user
+
+
+@router.get("/users", response_model=list[UserOut])
+def list_organization_users(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    users = db.scalars(
+        select(User).where(User.organization_id == current_user.organization_id)
+    ).all()
+    return users

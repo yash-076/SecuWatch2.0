@@ -5,7 +5,7 @@ import json
 from typing import Any
 
 from sqlalchemy import String, asc, desc, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.config import settings
 from app.models.alert import Alert, AlertSeverity, AlertStatus
@@ -203,6 +203,7 @@ class AlertService:
         sort_by: str = "created_at",
         order: str = "desc",
     ) -> tuple[list[dict], int]:
+        AssigneeUser = aliased(User)
         query = (
             select(
                 Alert.id,
@@ -215,7 +216,9 @@ class AlertService:
                 Alert.assigned_role,
                 Alert.created_at,
                 Alert.updated_at,
+                AssigneeUser.email.label("assigned_to_email"),
             )
+            .outerjoin(AssigneeUser, AssigneeUser.id == Alert.assigned_to)
             .join(Device, Device.id == Alert.device_id)
             .join(User, User.id == Device.user_id)
             .where(User.organization_id == user.organization_id)
@@ -269,6 +272,7 @@ class AlertService:
         return [dict(row) for row in rows], total
 
     def get_alert_by_id_for_user(self, user: User, alert_id: int) -> dict | None:
+        AssigneeUser = aliased(User)
         row = (
             self.db.execute(
                 select(
@@ -282,7 +286,9 @@ class AlertService:
                     Alert.assigned_role,
                     Alert.created_at,
                     Alert.updated_at,
+                    AssigneeUser.email.label("assigned_to_email"),
                 )
+                .outerjoin(AssigneeUser, AssigneeUser.id == Alert.assigned_to)
                 .join(Device, Device.id == Alert.device_id)
                 .join(User, User.id == Device.user_id)
                 .where(Alert.id == alert_id, User.organization_id == user.organization_id)

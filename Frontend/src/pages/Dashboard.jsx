@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Shield, Wifi, TrendingUp } from 'lucide-react'
+import { AlertCircle, Shield, TrendingUp } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import ChartCard from '../components/ChartCard'
 import AlertsLineChart from '../components/Charts/AlertsLineChart'
@@ -9,9 +9,9 @@ import {
   buildSeverityData,
   formatTimeAgo,
   getAlerts,
-  getDevices,
   mapSeverityLabel,
   mapStatusLabel,
+  getWebSocketUrl,
 } from '../services/api'
 
 const getSeverityColor = (severity) => {
@@ -38,7 +38,6 @@ const getSeverityBgColor = (severity) => {
 
 export default function Dashboard() {
   const [alerts, setAlerts] = useState([])
-  const [devices, setDevices] = useState([])
   const [totalAlerts, setTotalAlerts] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -51,21 +50,16 @@ export default function Dashboard() {
       setError('')
 
       try {
-        const [alertsResponse, devicesResponse] = await Promise.all([
-          getAlerts({ page: 1, limit: 200 }),
-          getDevices(),
-        ])
+        const alertsResponse = await getAlerts({ page: 1, limit: 200 })
 
         if (isMounted) {
           setAlerts(alertsResponse.alerts || [])
           setTotalAlerts(alertsResponse.total || 0)
-          setDevices(devicesResponse || [])
         }
       } catch (err) {
         if (isMounted) {
           setError(err.message || 'Failed to load dashboard data')
           setAlerts([])
-          setDevices([])
           setTotalAlerts(0)
         }
       } finally {
@@ -82,15 +76,70 @@ export default function Dashboard() {
     }
   }, [])
 
-  const activeDevices = useMemo(
-    () => devices.filter((device) => String(device.status || '').toLowerCase() === 'online').length,
-    [devices],
-  )
+  useEffect(() => {
+    let ws
+    let reconnectTimeout
+    let isCancelled = false
+
+    const connectWs = () => {
+      try {
+        const wsUrl = getWebSocketUrl()
+        ws = new WebSocket(wsUrl)
+
+        ws.onmessage = (event) => {
+          try {
+            const newAlert = JSON.parse(event.data)
+            setAlerts((prev) => {
+              if (prev.some((a) => a.id === newAlert.id)) {
+                return prev
+              }
+              return [newAlert, ...prev]
+            })
+            setTotalAlerts((prev) => prev + 1)
+          } catch (err) {
+            console.error('Failed to parse incoming dashboard alert:', err)
+          }
+        }
+
+        ws.onclose = () => {
+          if (!isCancelled) {
+            console.log('Dashboard WebSocket disconnected. Reconnecting in 3s...')
+            reconnectTimeout = setTimeout(connectWs, 3000)
+          }
+        }
+
+        ws.onerror = (err) => {
+          console.error('Dashboard WebSocket error:', err)
+          ws.close()
+        }
+      } catch (err) {
+        console.error('Dashboard WebSocket connection setup failed:', err)
+        if (!isCancelled) {
+          reconnectTimeout = setTimeout(connectWs, 3000)
+        }
+      }
+    }
+
+    connectWs()
+
+    return () => {
+      isCancelled = true
+      if (ws) ws.close()
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+    }
+  }, [])
 
   const criticalAlerts = useMemo(
     () => alerts.filter((alert) => ['Critical', 'High'].includes(mapSeverityLabel(alert.severity))).length,
     [alerts],
   )
+
+  const openAlerts = useMemo(() => {
+    return alerts.filter((alert) => {
+      const status = mapStatusLabel(alert.status)
+      return status !== 'Resolved'
+    }).length
+  }, [alerts])
 
   const alertsToday = useMemo(() => {
     const today = new Date().toDateString()
@@ -131,28 +180,24 @@ export default function Dashboard() {
           label="Total Alerts"
           value={isLoading ? '...' : String(totalAlerts)}
           subtitle="All time"
-          trend={12}
         />
         <StatCard
           icon={Shield}
           label="Critical Alerts"
           value={isLoading ? '...' : String(criticalAlerts)}
           subtitle="Requires attention"
-          trend={-8}
         />
         <StatCard
-          icon={Wifi}
-          label="Active Devices"
-          value={isLoading ? '...' : String(activeDevices)}
-          subtitle="Connected now"
-          trend={3}
+          icon={AlertCircle}
+          label="Open Alerts"
+          value={isLoading ? '...' : String(openAlerts)}
+          subtitle="Not resolved"
         />
         <StatCard
           icon={TrendingUp}
           label="Alerts Today"
           value={isLoading ? '...' : String(alertsToday)}
           subtitle="Last 24 hours"
-          trend={25}
         />
       </div>
 

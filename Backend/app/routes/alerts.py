@@ -15,7 +15,7 @@ router = APIRouter(prefix="/alerts", tags=["Alerts"])
 def list_alerts(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1),
-    severity: Literal["LOW", "MEDIUM", "HIGH"] | None = Query(default=None),
+    severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL", "low", "medium", "high", "critical"] | None = Query(default=None),
     device_id: int | None = Query(default=None, ge=1),
     from_time: datetime | None = Query(default=None),
     to_time: datetime | None = Query(default=None),
@@ -27,11 +27,15 @@ def list_alerts(
     current_user: User = Depends(get_current_user),
     alert_service: AlertService = Depends(get_alert_service),
 ):
+    if severity:
+        severity = severity.upper()
+
     if from_time and to_time and from_time > to_time:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="from_time must be less than or equal to to_time",
         )
+
 
     alerts, total = alert_service.get_alerts(
         user=current_user,

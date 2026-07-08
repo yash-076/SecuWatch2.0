@@ -1,13 +1,5 @@
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts'
 
-const data = [
-  { name: 'Critical', value: 24 },
-  { name: 'High', value: 58 },
-  { name: 'Medium', value: 96 },
-  { name: 'Low', value: 142 },
-  { name: 'Info', value: 78 },
-]
-
 const COLORS = {
   Critical: '#ef4444',
   High: '#f97316',
@@ -17,7 +9,7 @@ const COLORS = {
 }
 
 export default function SeverityPieChart({ data: chartData }) {
-  const resolvedData = chartData && chartData.length ? chartData : data
+  const resolvedData = (Array.isArray(chartData) ? chartData : []).filter((item) => item.value > 0)
 
   return (
     <ResponsiveContainer width="100%" height={300}>

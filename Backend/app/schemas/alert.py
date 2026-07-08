@@ -12,6 +12,7 @@ class AlertOut(BaseModel):
     description: str
     status: str
     assigned_to: int | None = None
+    assigned_to_email: str | None = None
     assigned_role: str | None = None
     created_at: datetime
     updated_at: datetime

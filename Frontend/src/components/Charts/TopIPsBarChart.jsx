@@ -1,16 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const data = [
-  { ip: '192.168.1.1', count: 45 },
-  { ip: '192.168.1.5', count: 38 },
-  { ip: '192.168.2.1', count: 32 },
-  { ip: '192.168.2.5', count: 28 },
-  { ip: '192.168.3.1', count: 22 },
-  { ip: '192.168.3.5', count: 18 },
-]
-
 export default function TopIPsBarChart({ data: chartData }) {
-  const resolvedData = chartData && chartData.length ? chartData : data
+  const resolvedData = Array.isArray(chartData) ? chartData : []
 
   return (
     <ResponsiveContainer width="100%" height={300}>

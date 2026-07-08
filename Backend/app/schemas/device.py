@@ -41,9 +41,17 @@ class DeviceDashboardOut(BaseModel):
     id: int
     device_name: str
     device_type: str
+    api_key: str | None = None
+    ip_address: str | None = None
     last_seen: datetime | None
     status: str
     alerts_summary: AlertsSummaryOut
+    heartbeat_interval: int
+    log_min_interval: int
+    log_max_interval: int
+    alert_config: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HeartbeatRequest(BaseModel):
@@ -56,3 +64,41 @@ class HeartbeatResponse(BaseModel):
     device_id: int
     last_seen: datetime
     status: str
+    heartbeat_interval: int | None = None
+    log_min_interval: int | None = None
+    log_max_interval: int | None = None
+    alert_config: str | None = None
+
+
+class DeviceConfigRequest(BaseModel):
+    device_id: int
+    api_key: str = Field(min_length=1)
+
+
+class DeviceConfigResponse(BaseModel):
+    success: bool
+    device_id: int
+    heartbeat_interval: int
+    log_min_interval: int
+    log_max_interval: int
+    alert_config: str | None = None
+
+
+class DeviceConfigUpdateRequest(BaseModel):
+    heartbeat_interval: int | None = Field(default=None, ge=1, le=3600)
+    log_min_interval: int | None = Field(default=None, ge=1, le=3600)
+    log_max_interval: int | None = Field(default=None, ge=1, le=3600)
+    alert_config: str | None = Field(default=None)
+
+
+class DeviceAlertIngestRequest(BaseModel):
+    device_id: int
+    api_key: str = Field(min_length=1)
+    type: str = Field(min_length=1, max_length=100)
+    severity: Literal["LOW", "MEDIUM", "HIGH"]
+    description: str = Field(min_length=1)
+
+
+class DeviceAlertIngestResponse(BaseModel):
+    success: bool
+    alert_id: int

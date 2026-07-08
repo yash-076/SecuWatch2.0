@@ -163,8 +163,30 @@ export async function logoutUser() {
   clearAuthTokens()
 }
 
-export async function getAlerts({ page = 1, limit = 100 } = {}) {
-  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+export async function getAlerts({
+  page = 1,
+  limit = 100,
+  severity,
+  deviceId,
+  fromTime,
+  toTime,
+  search,
+  sortBy = 'created_at',
+  order = 'desc',
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sort_by: sortBy,
+    order,
+  })
+
+  if (severity) params.set('severity', String(severity))
+  if (deviceId) params.set('device_id', String(deviceId))
+  if (fromTime) params.set('from_time', String(fromTime))
+  if (toTime) params.set('to_time', String(toTime))
+  if (search) params.set('search', String(search))
+
   return apiRequest(`/alerts?${params.toString()}`)
 }
 
@@ -184,6 +206,48 @@ export async function deleteDevice(deviceId) {
     method: 'DELETE',
   })
 }
+
+export async function getDeviceConfig(deviceId) {
+  return apiRequest(`/devices/${deviceId}/config`)
+}
+
+export async function updateDeviceConfig(deviceId, configData) {
+  return apiRequest(`/devices/${deviceId}/config`, {
+    method: 'PUT',
+    body: JSON.stringify(configData),
+  })
+}
+
+export async function getUsers() {
+  return apiRequest('/auth/users')
+}
+
+export async function assignAlert(alertId, userId) {
+  return apiRequest(`/alerts/${alertId}/assign`, {
+    method: 'PATCH',
+    body: JSON.stringify({ user_id: userId }),
+  })
+}
+
+export async function assignAlertToMe(alertId) {
+  return apiRequest(`/alerts/${alertId}/assign-to-me`, {
+    method: 'PATCH',
+  })
+}
+
+export async function updateAlertStatus(alertId, status) {
+  return apiRequest(`/alerts/${alertId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
+export function getWebSocketUrl() {
+  const wsBaseUrl = API_BASE_URL.replace(/^http/, 'ws')
+  const token = getAccessToken()
+  return `${wsBaseUrl}/ws/alerts?token=${token || ''}`
+}
+
 
 export function mapSeverityLabel(value) {
   const normalized = String(value || '').toUpperCase()

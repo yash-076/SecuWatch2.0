@@ -12,8 +12,9 @@ class AlertSeverity:
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
     
-    VALID_LEVELS = {LOW, MEDIUM, HIGH}
+    VALID_LEVELS = {LOW, MEDIUM, HIGH, CRITICAL}
 
 
 class AlertStatus(str, Enum):
@@ -63,3 +64,7 @@ class Alert(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    @property
+    def assigned_to_email(self) -> str | None:
+        return self.assignee.email if self.assignee else None

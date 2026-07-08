@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import FiltersBar from '../components/FiltersBar'
 import AlertDrawer from '../components/AlertDrawer'
-import { formatDateTime, getAlerts, mapSeverityLabel, mapStatusLabel } from '../services/api'
+import { formatDateTime, getAlerts, getDevices, mapSeverityLabel, mapStatusLabel, getWebSocketUrl } from '../services/api'
 
 const mapAlertToUi = (alert) => ({
+  ...alert,
+  rawStatus: alert.status,
+  rawAssignedTo: alert.assigned_to,
   id: alert.id,
   severity: mapSeverityLabel(alert.severity),
   source: `Device ${alert.device_id}`,
@@ -15,7 +18,7 @@ const mapAlertToUi = (alert) => ({
   port: '-',
   timestamp: formatDateTime(alert.created_at),
   status: mapStatusLabel(alert.status),
-  assignee: alert.assigned_to ? `User #${alert.assigned_to}` : 'Unassigned',
+  assignee: alert.assigned_to_email || (alert.assigned_to ? `User #${alert.assigned_to}` : 'Unassigned'),
   description: alert.description,
 })
 
@@ -54,8 +57,82 @@ const getStatusBgColor = (status) => {
 export default function Alerts() {
   const [selectedAlert, setSelectedAlert] = useState(null)
   const [alertsData, setAlertsData] = useState([])
+  const [devices, setDevices] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingDevices, setIsLoadingDevices] = useState(true)
   const [error, setError] = useState('')
+  const [filters, setFilters] = useState({
+    severity: '',
+    deviceId: '',
+    timeRange: '',
+    search: '',
+  })
+  const [appliedFilters, setAppliedFilters] = useState({
+    severity: '',
+    deviceId: '',
+    timeRange: '',
+    search: '',
+  })
+
+  const buildAlertQuery = (currentFilters) => {
+    const query = { page: 1, limit: 100 }
+
+    if (currentFilters.severity) {
+      query.severity = currentFilters.severity
+    }
+
+    if (currentFilters.deviceId) {
+      query.deviceId = currentFilters.deviceId
+    }
+
+    if (currentFilters.search) {
+      query.search = currentFilters.search.trim()
+    }
+
+    if (currentFilters.timeRange) {
+      const rangeInMsByKey = {
+        '24h': 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+        '30d': 30 * 24 * 60 * 60 * 1000,
+      }
+      const rangeInMs = rangeInMsByKey[currentFilters.timeRange]
+
+      if (rangeInMs) {
+        query.fromTime = new Date(Date.now() - rangeInMs).toISOString()
+      }
+    }
+
+    return query
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadDevices = async () => {
+      setIsLoadingDevices(true)
+
+      try {
+        const response = await getDevices()
+        if (isMounted) {
+          setDevices(Array.isArray(response) ? response : [])
+        }
+      } catch (_err) {
+        if (isMounted) {
+          setDevices([])
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingDevices(false)
+        }
+      }
+    }
+
+    loadDevices()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -65,8 +142,7 @@ export default function Alerts() {
       setError('')
 
       try {
-        const response = await getAlerts({ page: 1, limit: 100 })
-
+        const response = await getAlerts(buildAlertQuery(appliedFilters))
         if (isMounted) {
           setAlertsData((response.alerts || []).map(mapAlertToUi))
         }
@@ -87,7 +163,75 @@ export default function Alerts() {
     return () => {
       isMounted = false
     }
+  }, [appliedFilters])
+
+  useEffect(() => {
+    let ws
+    let reconnectTimeout
+    let isCancelled = false
+
+    const connectWs = () => {
+      try {
+        const wsUrl = getWebSocketUrl()
+        ws = new WebSocket(wsUrl)
+
+        ws.onmessage = (event) => {
+          try {
+            const newAlert = JSON.parse(event.data)
+            setAlertsData((prev) => {
+              if (prev.some((a) => a.id === newAlert.id)) {
+                return prev
+              }
+              return [mapAlertToUi(newAlert), ...prev]
+            })
+          } catch (err) {
+            console.error('Failed to parse incoming alert:', err)
+          }
+        }
+
+        ws.onclose = () => {
+          if (!isCancelled) {
+            console.log('Alerts WebSocket disconnected. Reconnecting in 3s...')
+            reconnectTimeout = setTimeout(connectWs, 3000)
+          }
+        }
+
+        ws.onerror = (err) => {
+          console.error('Alerts WebSocket error:', err)
+          ws.close()
+        }
+      } catch (err) {
+        console.error('Alerts WebSocket connection setup failed:', err)
+        if (!isCancelled) {
+          reconnectTimeout = setTimeout(connectWs, 3000)
+        }
+      }
+    }
+
+    connectWs()
+
+    return () => {
+      isCancelled = true
+      if (ws) ws.close()
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+    }
   }, [])
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(filters)
+  }
+
+  const handleResetFilters = () => {
+    const resetFilters = {
+      severity: '',
+      deviceId: '',
+      timeRange: '',
+      search: '',
+    }
+
+    setFilters(resetFilters)
+    setAppliedFilters(resetFilters)
+  }
 
   return (
     <div className="space-y-6 p-4">
@@ -100,7 +244,14 @@ export default function Alerts() {
       {error && <p className="text-sm text-soc-critical">{error}</p>}
 
       {/* Filters */}
-      <FiltersBar />
+      <FiltersBar
+        filters={filters}
+        devices={devices}
+        isLoadingDevices={isLoadingDevices}
+        onChange={setFilters}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+      />
 
       {/* Alerts Table */}
       <div className="card-base p-0 overflow-hidden">
@@ -184,7 +335,14 @@ export default function Alerts() {
       </div>
 
       {/* Alert Drawer */}
-      <AlertDrawer alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
+      <AlertDrawer 
+        alert={selectedAlert} 
+        onClose={() => setSelectedAlert(null)} 
+        onUpdate={(updatedAlert) => {
+          setAlertsData((prev) => prev.map((a) => a.id === updatedAlert.id ? mapAlertToUi(updatedAlert) : a))
+          setSelectedAlert(mapAlertToUi(updatedAlert))
+        }}
+      />
     </div>
   )
 }

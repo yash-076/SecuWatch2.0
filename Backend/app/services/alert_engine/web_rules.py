@@ -21,7 +21,7 @@ class WebAlertEngine(BaseAlertEngine):
         if self._is_sql_injection(message):
             return AlertData(
                 type="SQL_INJECTION_ATTEMPT",
-                severity="HIGH",
+                severity="CRITICAL",
                 description=f"Potential SQL injection detected: {log.message[:100]}",
             )
 

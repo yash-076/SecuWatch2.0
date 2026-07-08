@@ -1,0 +1,11 @@
+{
+  "watch_files": [
+    "C:\\Apache24\\logs\\access.log",
+    "C:\\Apache24\\logs\\error.log"
+  ],
+  "windows_event_channels": [
+    "Security",
+    "System",
+    "Application"
+  ]
+}

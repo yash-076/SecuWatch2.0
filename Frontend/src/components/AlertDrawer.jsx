@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { getUsers, assignAlert, assignAlertToMe, updateAlertStatus, getCurrentUser } from '../services/api'
 
 const getSeverityColor = (severity) => {
   const colors = {
@@ -11,8 +13,66 @@ const getSeverityColor = (severity) => {
   return colors[severity] || '#e2e8f0'
 }
 
-export default function AlertDrawer({ alert, onClose }) {
+export default function AlertDrawer({ alert, onClose, onUpdate }) {
+  const [users, setUsers] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!alert) return
+    let isMounted = true
+
+    getUsers()
+      .then((data) => {
+        if (isMounted) setUsers(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => console.error('Failed to fetch organization users:', err))
+
+    getCurrentUser()
+      .then((user) => {
+        if (isMounted) setCurrentUser(user)
+      })
+      .catch((err) => console.error('Failed to get current user info:', err))
+
+    return () => {
+      isMounted = false
+    }
+  }, [alert])
+
   if (!alert) return null
+
+  const handleAssignChange = async (e) => {
+    const val = e.target.value
+    setError('')
+    try {
+      let updated
+      if (val === '') {
+        return
+      } else if (currentUser && parseInt(val) === currentUser.id) {
+        updated = await assignAlertToMe(alert.id)
+      } else {
+        updated = await assignAlert(alert.id, parseInt(val))
+      }
+      if (onUpdate && updated) {
+        onUpdate(updated)
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to assign alert')
+    }
+  }
+
+  const handleStatusChange = async (e) => {
+    const val = e.target.value
+    setError('')
+    try {
+      const updated = await updateAlertStatus(alert.id, val)
+      if (onUpdate && updated) {
+        onUpdate(updated)
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update alert status')
+    }
+  }
 
   return (
     <>
@@ -36,7 +96,7 @@ export default function AlertDrawer({ alert, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 pb-20 space-y-6">
           {/* Severity Badge */}
           <div>
             <p className="text-soc-secondary text-sm font-medium mb-2">Severity</p>
@@ -79,25 +139,41 @@ export default function AlertDrawer({ alert, onClose }) {
 
           {/* Actions */}
           <div className="space-y-3 pt-4 border-t border-soc-border">
-            <select className="input-soc w-full">
-              <option>Assign to...</option>
-              <option>John Doe</option>
-              <option>Jane Smith</option>
-              <option>Mike Johnson</option>
-            </select>
+            {error && <p className="text-xs text-soc-critical">{error}</p>}
+            
+            <div>
+              <label className="block text-xs font-semibold text-soc-secondary uppercase mb-1">Assignee</label>
+              <select 
+                value={alert.rawAssignedTo || ''} 
+                onChange={handleAssignChange} 
+                className="input-soc w-full"
+                disabled={alert.rawStatus === 'RESOLVED'}
+              >
+                <option value="">Unassigned</option>
+                {currentUser && (
+                  <option value={currentUser.id}>Assign to Me ({currentUser.email})</option>
+                )}
+                {users.filter(u => !currentUser || u.id !== currentUser.id).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.email} ({u.role})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select className="input-soc w-full">
-              <option>Change Status</option>
-              <option>Open</option>
-              <option>Acknowledged</option>
-              <option>Investigating</option>
-              <option>Resolved</option>
-              <option>False Positive</option>
-            </select>
-
-            <button className="btn-danger w-full">
-              Delete Alert
-            </button>
+            <div>
+              <label className="block text-xs font-semibold text-soc-secondary uppercase mb-1">Status</label>
+              <select 
+                value={alert.rawStatus} 
+                onChange={handleStatusChange} 
+                className="input-soc w-full"
+                disabled={alert.rawStatus === 'RESOLVED'}
+              >
+                {alert.rawStatus === 'NEW' && <option value="NEW">Open</option>}
+                <option value="IN_PROGRESS">Investigating</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

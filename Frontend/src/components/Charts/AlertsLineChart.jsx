@@ -1,17 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const data = [
-  { time: '00:00', alerts: 45 },
-  { time: '04:00', alerts: 52 },
-  { time: '08:00', alerts: 38 },
-  { time: '12:00', alerts: 71 },
-  { time: '16:00', alerts: 65 },
-  { time: '20:00', alerts: 88 },
-  { time: '23:59', alerts: 72 },
-]
-
 export default function AlertsLineChart({ data: chartData }) {
-  const resolvedData = chartData && chartData.length ? chartData : data
+  const resolvedData = Array.isArray(chartData) ? chartData : []
 
   return (
     <ResponsiveContainer width="100%" height={300}>
