@@ -99,7 +99,7 @@ export default function Navbar() {
           </button>
 
           {isNotificationOpen && (
-            <div className="absolute right-0 mt-3 w-96 max-w-[90vw] bg-soc-card border border-soc-border rounded-xl shadow-soc-md z-50 overflow-hidden">
+            <div className="absolute right-0 mt-3 w-96 max-w-[90vw] bg-soc-card border border-soc-border rounded-xl shadow-soc-overlay z-50 overflow-hidden">
               <div className="px-4 py-3 border-b border-soc-border flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-soc-text">High Alert Notifications</h3>
                 <span className="text-xs text-soc-muted">{notifications.length} total</span>
@@ -138,7 +138,7 @@ export default function Navbar() {
 
         {/* User Profile */}
         <div className="flex items-center gap-3 pl-8 border-l border-soc-border hover:opacity-80 transition-smooth cursor-pointer">
-          <div className="w-10 h-10 bg-gradient-to-br from-soc-info to-blue-600 rounded-lg flex items-center justify-center shadow-soc-md">
+          <div className="w-10 h-10 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow">
             <User size={20} className="text-white" />
           </div>
           <div>

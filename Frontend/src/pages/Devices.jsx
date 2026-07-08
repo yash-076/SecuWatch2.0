@@ -310,7 +310,7 @@ export default function Devices() {
           <p>Showing {devicesData.length} devices</p>
           <div className="flex gap-2">
             <button className="px-3 py-2 hover:bg-soc-card rounded transition-all duration-200">Previous</button>
-            <button className="px-3 py-2 bg-soc-info text-white rounded transition-all duration-200">1</button>
+            <button className="px-3 py-2 bg-soc-accent text-white rounded transition-all duration-200">1</button>
             <button className="px-3 py-2 hover:bg-soc-card rounded transition-all duration-200">2</button>
             <button className="px-3 py-2 hover:bg-soc-card rounded transition-all duration-200">Next</button>
           </div>

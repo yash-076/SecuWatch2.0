@@ -8,9 +8,9 @@ const getSeverityColor = (severity) => {
     High: '#f97316',
     Medium: '#f59e0b',
     Low: '#22c55e',
-    Info: '#3b82f6',
+    Info: '#e63946',
   }
-  return colors[severity] || '#e2e8f0'
+  return colors[severity] || '#f0f0f0'
 }
 
 export default function AlertDrawer({ alert, onClose, onUpdate }) {

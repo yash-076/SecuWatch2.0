@@ -9,9 +9,9 @@
 }
 
 body {
-  background-color: #0f172a;
-  color: #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #0a0a0a;
+  color: #f0f0f0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 html, body, #root {
@@ -20,32 +20,47 @@ html, body, #root {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #0a0a0a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: #1e1e1e;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #333333;
 }
 
 @layer components {
-  /* Card Base - Enhanced with better shadow and border */
+  /* Card Base - Dark glassmorphism */
   .card-base {
     @apply bg-soc-card border border-soc-border rounded-xl shadow-soc-md;
-    background: linear-gradient(135deg, #1e293b 0%, #1a1f2e 100%);
+    background: linear-gradient(135deg, #111111 0%, #0d0d0d 100%);
   }
 
   .card-base:hover {
-    @apply border-soc-secondary shadow-soc-lg transition-all duration-300;
+    @apply border-soc-border shadow-soc-lg transition-all duration-300;
+    border-color: rgba(230, 57, 70, 0.15);
+  }
+
+  /* Glass card variant for landing page */
+  .card-glass {
+    background: rgba(17, 17, 17, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+  }
+
+  .card-glass:hover {
+    border-color: rgba(230, 57, 70, 0.2);
+    box-shadow: 0 0 30px rgba(230, 57, 70, 0.08);
   }
 
   /* Enhanced typography hierarchy */
@@ -170,17 +185,17 @@ html, body, #root {
   }
 
   .severity-info-bg {
-    @apply bg-blue-500 bg-opacity-10 text-soc-info border-l-4 border-soc-info;
+    @apply bg-red-500 bg-opacity-10 text-soc-info border-l-4 border-soc-info;
   }
 
   /* Input styling */
   .input-soc {
-    @apply bg-soc-bg border border-soc-border rounded-lg text-soc-text px-4 py-2 placeholder:text-soc-muted focus:outline-none focus:border-soc-info focus:ring-1 focus:ring-soc-info transition-smooth;
+    @apply bg-soc-bg border border-soc-border rounded-lg text-soc-text px-4 py-2 placeholder:text-soc-muted focus:outline-none focus:border-soc-accent focus:ring-1 focus:ring-soc-accent transition-smooth;
   }
 
   /* Button styling */
   .btn-primary {
-    @apply px-4 py-2 bg-soc-info hover:bg-blue-600 text-white rounded-lg font-medium transition-smooth;
+    @apply px-4 py-2 bg-soc-accent hover:bg-soc-accent-light text-white rounded-lg font-medium transition-smooth;
   }
 
   .btn-secondary {
@@ -191,13 +206,69 @@ html, body, #root {
     @apply px-4 py-2 bg-soc-critical hover:bg-red-500 text-white rounded-lg font-medium transition-smooth;
   }
 
-  /* Fade and scale effects */
-  .scale-102 {
-    @apply scale-102;
-  }
-
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-soc-info to-blue-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-soc-accent to-soc-accent-light bg-clip-text text-transparent;
   }
 }
+
+/* ========================= */
+/* Landing Page Styles       */
+/* ========================= */
+
+/* Hero glow orb */
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(230, 57, 70, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle grid pattern background */
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Animated border glow on hover */
+.card-hover-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-hover-glow::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(230, 57, 70, 0) 0%, rgba(230, 57, 70, 0.15) 50%, rgba(230, 57, 70, 0) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+}
+
+.card-hover-glow:hover::before {
+  opacity: 1;
+}
+
+/* Number counter animation support */
+.landing-stat {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }

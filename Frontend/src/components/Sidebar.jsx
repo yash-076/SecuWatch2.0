@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, AlertCircle, BarChart3, Wifi, Home } from 'lucide-react'
+import { Menu, X, AlertCircle, BarChart3, Wifi, Home, Shield } from 'lucide-react'
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true)
   const location = useLocation()
 
   const menuItems = [
-    { icon: Home, label: 'Dashboard', path: '/' },
-    { icon: AlertCircle, label: 'Alerts', path: '/alerts' },
-    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-    { icon: Wifi, label: 'Devices', path: '/devices' },
+    { icon: Home, label: 'Dashboard', path: '/dashboard' },
+    { icon: AlertCircle, label: 'Alerts', path: '/dashboard/alerts' },
+    { icon: BarChart3, label: 'Analytics', path: '/dashboard/analytics' },
+    { icon: Wifi, label: 'Devices', path: '/dashboard/devices' },
   ]
 
   const isActive = (path) => location.pathname === path
@@ -21,13 +21,21 @@ export default function Sidebar() {
       <div className={`fixed left-0 top-0 h-screen bg-soc-sidebar border-r border-soc-border transition-smooth z-50 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
         {/* Header */}
         <div className="flex items-center justify-between h-20 px-4 border-b border-soc-border">
-          {isOpen && (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-soc-info to-blue-600 rounded-lg flex items-center justify-center shadow-soc-md">
-                <span className="text-white font-bold text-sm">S</span>
+          {isOpen ? (
+            <Link to="/" className="flex items-center gap-3 group cursor-pointer">
+              <div className="w-9 h-9 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow group-hover:shadow-soc-glow-strong transition-all duration-300">
+                <Shield size={18} className="text-white" />
               </div>
-              <span className="font-bold text-soc-text">SecuWatch</span>
-            </div>
+              <span className="font-bold text-soc-text group-hover:opacity-80 transition-smooth">
+                Secu<span className="text-soc-accent">Watch</span>
+              </span>
+            </Link>
+          ) : (
+            <Link to="/" className="group" title="Back to Home">
+              <div className="w-9 h-9 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow group-hover:shadow-soc-glow-strong transition-all duration-300">
+                <Shield size={18} className="text-white" />
+              </div>
+            </Link>
           )}
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -45,7 +53,7 @@ export default function Sidebar() {
               to={item.path}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-smooth ${
                 isActive(item.path)
-                  ? 'bg-gradient-to-r from-soc-info to-blue-600 text-white shadow-soc-md'
+                  ? 'bg-gradient-to-r from-soc-accent to-soc-accent-light text-white shadow-soc-glow'
                   : 'text-soc-secondary hover:bg-soc-card hover:text-soc-text'
               }`}
             >
@@ -58,7 +66,7 @@ export default function Sidebar() {
         {/* Footer */}
         {isOpen && (
           <div className="border-t border-soc-border p-4">
-            <p className="text-xs text-soc-muted text-center font-medium">v1.0.0</p>
+            <p className="text-xs text-soc-muted text-center font-medium">v2.0.0</p>
           </div>
         )}
       </div>

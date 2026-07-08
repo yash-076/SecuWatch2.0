@@ -9,8 +9,8 @@ export default function StatCard({ icon: Icon, label, value, subtitle, trend }) 
              <p className="text-xs text-soc-muted font-medium">{subtitle}</p>
            )}
         </div>
-        <div className="p-3 bg-soc-info bg-opacity-10 rounded-lg">
-          <Icon size={24} className="text-soc-info" />
+        <div className="p-3 bg-soc-accent bg-opacity-10 rounded-lg">
+          <Icon size={24} className="text-soc-accent" />
         </div>
       </div>
       {trend && (

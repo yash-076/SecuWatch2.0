@@ -20,9 +20,9 @@ const getSeverityColor = (severity) => {
     High: '#f97316',
     Medium: '#f59e0b',
     Low: '#22c55e',
-    Info: '#3b82f6',
+    Info: '#e63946',
   }
-  return colors[severity] || '#e2e8f0'
+  return colors[severity] || '#f0f0f0'
 }
 
 const getSeverityBgColor = (severity) => {
@@ -31,7 +31,7 @@ const getSeverityBgColor = (severity) => {
     High: 'bg-orange-500 bg-opacity-10',
     Medium: 'bg-yellow-500 bg-opacity-10',
     Low: 'bg-green-500 bg-opacity-10',
-    Info: 'bg-blue-500 bg-opacity-10',
+    Info: 'bg-red-400 bg-opacity-10',
   }
   return colors[severity] || 'bg-gray-500 bg-opacity-10'
 }

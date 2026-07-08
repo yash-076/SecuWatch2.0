@@ -5,7 +5,7 @@ const COLORS = {
   High: '#f97316',
   Medium: '#f59e0b',
   Low: '#22c55e',
-  Info: '#3b82f6',
+  Info: '#e63946',
 }
 
 export default function SeverityPieChart({ data: chartData }) {
@@ -30,13 +30,14 @@ export default function SeverityPieChart({ data: chartData }) {
         </Pie>
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1e293b',
-            border: '1px solid #334155',
+            backgroundColor: '#111111',
+            border: '1px solid #1e1e1e',
             borderRadius: '8px',
-            color: '#e2e8f0',
+            color: '#f0f0f0',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7)',
           }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ color: '#8a8a8a', fontSize: '12px' }} />
       </PieChart>
     </ResponsiveContainer>
   )
