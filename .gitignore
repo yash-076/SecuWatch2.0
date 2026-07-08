@@ -64,5 +64,3 @@ Frontend/.vite/
 ### IDE metadata ###
 .idea/
 .history/
-
-*.md
