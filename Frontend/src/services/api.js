@@ -43,6 +43,29 @@ export function hasAccessToken() {
   return Boolean(getAccessToken())
 }
 
+function formatApiError(detail) {
+  if (typeof detail === 'string') {
+    return detail
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((err) => {
+        const field = err.loc && err.loc.length > 0 ? err.loc[err.loc.length - 1] : ''
+        const message = err.msg || 'Invalid value'
+        // Capitalize field name for better readability
+        const fieldLabel = field ? field.charAt(0).toUpperCase() + field.slice(1) : ''
+        return fieldLabel ? `${fieldLabel}: ${message}` : message
+      })
+      .join(', ')
+  }
+  if (typeof detail === 'object' && detail !== null) {
+    if (detail.message) return detail.message
+    if (detail.detail) return formatApiError(detail.detail)
+    return JSON.stringify(detail)
+  }
+  return String(detail)
+}
+
 async function apiRequestInternal(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -68,7 +91,7 @@ async function apiRequestInternal(path, options = {}) {
     const detail = payload?.detail || payload || `Request failed (${response.status})`
     throw {
       status: response.status,
-      message: typeof detail === 'string' ? detail : JSON.stringify(detail),
+      message: formatApiError(detail),
     }
   }
 
