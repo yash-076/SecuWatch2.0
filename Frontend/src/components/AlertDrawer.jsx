@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
-import { getUsers, assignAlert, assignAlertToMe, updateAlertStatus, getCurrentUser } from '../services/api'
+import { X, Sparkles } from 'lucide-react'
+import { getUsers, assignAlert, assignAlertToMe, updateAlertStatus, getCurrentUser, analyzeAlert } from '../services/api'
 
 const getSeverityColor = (severity) => {
   const colors = {
@@ -17,10 +17,18 @@ export default function AlertDrawer({ alert, onClose, onUpdate }) {
   const [users, setUsers] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
   const [error, setError] = useState('')
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     if (!alert) return
     let isMounted = true
+
+    // Reset AI analysis state when active alert changes
+    setAiAnalysis(null)
+    setAiError('')
+    setAiLoading(false)
 
     getUsers()
       .then((data) => {
@@ -74,6 +82,23 @@ export default function AlertDrawer({ alert, onClose, onUpdate }) {
     }
   }
 
+  const handleAiTriage = async () => {
+    setAiLoading(true)
+    setAiError('')
+    try {
+      const response = await analyzeAlert(alert.id)
+      if (response && response.analysis) {
+        setAiAnalysis(response.analysis)
+      } else {
+        throw new Error('Invalid response from AI engine')
+      }
+    } catch (err) {
+      setAiError(err.message || 'AI Analysis failed. Check backend credentials.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   return (
     <>
       {/* Overlay */}
@@ -107,8 +132,9 @@ export default function AlertDrawer({ alert, onClose, onUpdate }) {
               {alert.severity}
             </span>
           </div>
-         {/* Details Grid */}
-         <div className="space-y-4 mt-6">
+
+          {/* Details Grid */}
+          <div className="space-y-4 mt-6">
             {[
               { label: 'Alert ID', value: `#ALT-${alert.id}` },
               { label: 'Timestamp', value: alert.timestamp },
@@ -125,6 +151,61 @@ export default function AlertDrawer({ alert, onClose, onUpdate }) {
                 <p className="text-soc-text font-mono text-sm break-all">{item.value}</p>
               </div>
             ))}
+          </div>
+
+          {/* AI Analysis Section */}
+          <div className="space-y-4 pt-4 border-t border-soc-border">
+            <div className="flex items-center gap-2 text-soc-accent">
+              <Sparkles size={18} className="animate-pulse-subtle" />
+              <h3 className="text-sm font-bold uppercase tracking-wider">SecuWatch AI Triage</h3>
+            </div>
+
+            {aiError && <p className="text-xs text-soc-critical">{aiError}</p>}
+
+            {!aiAnalysis && !aiLoading && (
+              <button
+                onClick={handleAiTriage}
+                className="w-full flex items-center justify-center gap-2 btn-primary py-2.5 font-semibold text-sm shadow-soc-glow hover:shadow-soc-glow-strong"
+              >
+                <Sparkles size={16} />
+                Evaluate with AI
+              </button>
+            )}
+
+            {aiLoading && (
+              <div className="bg-soc-bg border border-soc-border rounded-lg p-6 text-center space-y-3">
+                <div className="w-8 h-8 border-2 border-soc-accent border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-xs text-soc-secondary">AI Threat Engine analyzing alert...</p>
+              </div>
+            )}
+
+            {aiAnalysis && (
+              <div className="space-y-4 bg-soc-bg border border-soc-border rounded-xl p-4">
+                <div>
+                  <h4 className="text-xs font-bold text-soc-secondary uppercase mb-1">Explanation</h4>
+                  <p className="text-sm text-soc-text leading-relaxed">{aiAnalysis.explanation}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-soc-secondary uppercase mb-1">Risk & Reason</h4>
+                  <p className="text-sm text-soc-text leading-relaxed">{aiAnalysis.risk_level_reasoning}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-soc-secondary uppercase mb-1">Why It Happened</h4>
+                  <p className="text-sm text-soc-text leading-relaxed">{aiAnalysis.why_it_happened}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-soc-secondary uppercase mb-2">Mitigation Steps</h4>
+                  <ul className="space-y-2">
+                    {aiAnalysis.mitigation_steps.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-xs text-soc-secondary leading-relaxed">
+                        <span className="w-1.5 h-1.5 rounded-full bg-soc-accent mt-1.5 flex-shrink-0" />
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Full Payload */}

@@ -271,6 +271,21 @@ export function getWebSocketUrl() {
   return `${wsBaseUrl}/ws/alerts?token=${token || ''}`
 }
 
+export async function analyzeAlert(alertId) {
+  return apiRequest('/analyze-alert', {
+    method: 'POST',
+    body: JSON.stringify({ alert_id: alertId }),
+  })
+}
+
+export async function chatWithAI(query) {
+  return apiRequest('/chat', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  })
+}
+
+
 
 export function mapSeverityLabel(value) {
   const normalized = String(value || '').toUpperCase()
