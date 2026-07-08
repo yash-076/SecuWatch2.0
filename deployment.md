@@ -81,8 +81,40 @@ Now that your SecuWatch platform is live in the cloud:
     SECUWATCH_DEVICE_ID=your_device_numerical_id
     SECUWATCH_API_KEY=your_copied_device_api_key
     ```
-5.  Run the agent:
-    ```bash
-    python run_linux_syslog.py  # or web log, windows events tailer
-    ```
     The agent will stream alerts across the internet securely to your Render server, and you'll see them immediately on your Vercel client!
+
+---
+
+## 5. Integrating Apache Kafka in Production (Optional)
+
+SecuWatch runs a **hybrid log processing model**. You can deploy it with or without a Kafka broker:
+
+### A. Minimal Setup: No Kafka (Default Fallback)
+If you do not configure any Kafka variables, the backend automatically detects that Kafka is down and falls back to **immediate processing**. Logs will be parsed, database alerts saved, and WebSocket updates dispatched instantly inside the API thread. This is perfect for initial setups and smaller scale deployments.
+
+### B. Scalable Setup: With Apache Kafka
+For high-volume logging environments, you can leverage Kafka to decouple ingestion from threat parsing:
+
+1.  **Provision a Managed Kafka Cluster**:
+    *   Create a Kafka cluster on a service like [Upstash Kafka](https://upstash.com/) or [Confluent Cloud](https://confluent.cloud/).
+    *   Retrieve the **Bootstrap Server URL** (e.g. `pkc-xxxxx.us-east-1.aws.confluent.cloud:9092`) and access credentials.
+2.  **Add Kafka Variables to Render Web Service**:
+    Under Render Web Service -> **Environment**, add:
+    *   `KAFKA_BOOTSTRAP_SERVERS`: `your-kafka-host:port`
+    *   `KAFKA_REPLICATION_FACTOR`: `1` (or matching your cluster partition sizing)
+3.  **Deploy Background Workers for Consumers on Render**:
+    Since consumers run infinite poll loops, they must run as separate background processes.
+    *   On Render, click **New** -> **Background Worker**.
+    *   Connect your GitHub repository.
+    *   **Root Directory**: `Backend`
+    *   **Runtime**: `Docker`
+    *   Add the same environment variables (`DATABASE_URL`, `REDIS_URL`, `KAFKA_BOOTSTRAP_SERVERS`, `SECRET_KEY`).
+    *   **Start Command**: Customize the Docker Entrypoint CMD for the consumers. Set the Start Command on Render overrides to run the respective consumer scripts:
+        *   **Log Event Parser Worker**:
+            *   Command: `python consumers/log_consumer.py`
+        *   **Alert Broadcast Worker**:
+            *   Command: `python consumers/alert_consumer.py`
+        *   **Heartbeat Monitor Worker**:
+            *   Command: `python consumers/heartbeat_consumer.py`
+4.  Once deployed, Render Web Service will ingest logs and put them in Kafka. The Background Workers will consume the logs, evaluate alert threat signatures asynchronously, commit to Postgres, and stream the finalized alerts back to your browser.
+

@@ -338,3 +338,67 @@ When an analyst requests AI triage support for a specific alert, the backend per
     *   `risk_level_reasoning`: Explaining why this represents critical, high, or medium risk.
     *   `mitigation_steps`: An array of clean action items for the analyst to secure the host.
 5.  Commit the result to the `alert_ai_analyses` table using an upsert operation so subsequent queries for the same alert ID pull directly from the database cache.
+
+---
+
+## 9. Message Broker Integration (Apache Kafka)
+
+SecuWatch includes a production-grade asynchronous log ingestion and processing pipeline built on **Apache Kafka** (`kafka-python` library). 
+
+### Ingestion Pipelines Flow
+
+```
+[Device Agent Log POST]
+          │
+          ▼
+   [FastAPI Route]
+          │
+          ├─► 1. Save Log to Postgres
+          │
+          ├─► 2. Produce Log Event to Kafka "logs" topic
+          │      │
+          │      ▼ (If Kafka is down/disabled)
+          │      [Sync Fallback Path] ──► Runs rule engine immediately in-request
+          │
+          ▼
+[Log Consumer Worker] ── (Polls "logs" topic)
+          │
+          ├─► Runs BaseAlertEngine signatures
+          ├─► Deduplicates alert via Redis cache SHA-256 fingerprint
+          ├─► Persists alert to Postgres alert tables
+          ├─► Produces alert event to Kafka "alerts" topic
+          │
+          ▼
+[Alert Consumer Worker] ── (Polls "alerts" topic)
+          │
+          ▼
+   [WebSocket Manager] ── (Relays alert to Redis channel → feeds UI clients)
+```
+
+### Kafka Topics Configuration
+*   **Logs Topic** (`logs`): Receives raw logged inputs from agents. Messages key-partitioned by `device_id` to guarantee log order per device.
+*   **Alerts Topic** (`alerts`): Receives generated threat alerts.
+*   **Heartbeats Topic** (`heartbeat`): Receives heartbeat status pulses.
+
+### Components Structure
+*   **`app/services/kafka_producer.py`**:
+    *   Maintains a thread-safe, singleton `KafkaProducer` wrapper (`_producer_lock`).
+    *   Value Serializer: Encodes JSON messages to UTF-8 bytes (converts datetime parameters to ISO format).
+    *   Topic Bootstrapper (`ensure_topics_exist`): Runs on FastAPI startup. Instantiates a temporary `KafkaAdminClient` to check for and create required topics with configured partitions/replication-factors.
+*   **`consumers/log_consumer.py`**:
+    *   A daemon script run as a separate OS process.
+    *   Subscribes to the `logs` topic using a consumer group (`secuwatch-log-consumer`).
+    *   For every consumed log, it runs the signature checks, performs Redis cache checks, creates the alert via `AlertService` inside Postgres, and triggers a downstream event to the `alerts` topic.
+*   **`consumers/alert_consumer.py`**:
+    *   A daemon script that subscribes to the `alerts` topic.
+    *   Directs alert events to `ws_manager.broadcast_sync(payload)`, invoking Redis relay broadcasts for connected browser dashboards.
+*   **`consumers/heartbeat_consumer.py`**:
+    *   Processes heartbeat statuses, updating device states to `online` and logging latency statistics.
+
+### Ingestion Failover & Fallback Mechanism
+If no Kafka brokers are available on startup, the connection fails silently. Inside `/logs` route ingestion, the endpoint checks if the event was successfully published. If `produce_log_event` returns `False`, the backend prints a warning and invokes the synchronous fallback:
+```python
+dispatch_result = event_dispatcher.handle_log_event(log)
+```
+This processes the threat signatures in-request and pushes the alert to WebSockets immediately, ensuring the app remains fully functional even in resource-constrained environments that do not deploy a full Kafka broker cluster.
+
