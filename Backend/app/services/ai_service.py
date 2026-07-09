@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -7,6 +8,8 @@ from urllib.request import Request, urlopen
 from redis import Redis
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AIService:
@@ -216,7 +219,12 @@ class AIService:
         if not self.redis_client or settings.ai_cache_ttl_seconds <= 0:
             return None
 
-        cached = self.redis_client.get(key)
+        try:
+            cached = self.redis_client.get(key)
+        except Exception as exc:
+            logger.warning("AI Service cache read failed (Redis connection error): %s", exc)
+            return None
+
         if not cached:
             return None
 
@@ -236,4 +244,7 @@ class AIService:
         if not self.redis_client or settings.ai_cache_ttl_seconds <= 0:
             return
 
-        self.redis_client.setex(key, settings.ai_cache_ttl_seconds, json.dumps(value))
+        try:
+            self.redis_client.setex(key, settings.ai_cache_ttl_seconds, json.dumps(value))
+        except Exception as exc:
+            logger.warning("AI Service cache write failed (Redis connection error): %s", exc)

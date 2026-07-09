@@ -20,29 +20,35 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div className={`fixed left-0 top-0 h-screen bg-soc-sidebar border-r border-soc-border transition-smooth z-50 flex flex-col ${isOpen ? 'w-64' : 'w-20'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between h-20 px-4 border-b border-soc-border">
+        {/* Header */}
+        <div className={`flex items-center h-20 border-b border-soc-border transition-smooth ${isOpen ? 'justify-between px-4' : 'justify-center px-0'}`}>
           {isOpen ? (
-            <Link to="/" className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-9 h-9 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow group-hover:shadow-soc-glow-strong transition-all duration-300">
-                <Shield size={18} className="text-white" />
-              </div>
-              <span className="font-bold text-soc-text group-hover:opacity-80 transition-smooth">
-                Secu<span className="text-soc-accent">Watch</span>
-              </span>
-            </Link>
+            <>
+              <Link to="/" className="flex items-center gap-3 group cursor-pointer">
+                <div className="w-9 h-9 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow group-hover:shadow-soc-glow-strong transition-all duration-300">
+                  <Shield size={18} className="text-white" />
+                </div>
+                <span className="font-bold text-soc-text group-hover:opacity-80 transition-smooth">
+                  Secu<span className="text-soc-accent">Watch</span>
+                </span>
+              </Link>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 hover:bg-soc-card rounded-lg transition-smooth text-soc-secondary hover:text-soc-text"
+                title="Collapse Sidebar"
+              >
+                <X size={20} />
+              </button>
+            </>
           ) : (
-            <Link to="/" className="group" title="Back to Home">
-              <div className="w-9 h-9 bg-gradient-to-br from-soc-accent to-soc-accent-light rounded-lg flex items-center justify-center shadow-soc-glow group-hover:shadow-soc-glow-strong transition-all duration-300">
-                <Shield size={18} className="text-white" />
-              </div>
-            </Link>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="p-2.5 hover:bg-soc-card rounded-lg transition-smooth text-soc-secondary hover:text-soc-text"
+              title="Expand Sidebar"
+            >
+              <Menu size={20} />
+            </button>
           )}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-soc-card rounded-lg transition-smooth text-soc-secondary hover:text-soc-text"
-          >
-            {isOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
 
         {/* Menu Items */}
@@ -51,7 +57,9 @@ export default function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-smooth ${
+              className={`flex items-center transition-smooth rounded-lg ${
+                isOpen ? 'px-4 py-3 gap-3 justify-start' : 'p-3 justify-center'
+              } ${
                 isActive(item.path)
                   ? 'bg-gradient-to-r from-soc-accent to-soc-accent-light text-white shadow-soc-glow'
                   : 'text-soc-secondary hover:bg-soc-card hover:text-soc-text'
